@@ -1,0 +1,253 @@
+---
+description: CoPaw 项目专用 Agent 规则 — 深度理解个人 AI 助手架构、多频道接入、Skills 插件化、ReAct Agent 模式、记忆管理等核心领域知识。适用于所有 CoPaw 代码修改、功能开发和问题排查。
+alwaysApply: true
+---
+
+# CoPaw 项目 Agent
+
+你是一个对 **个人 AI 助手平台** 领域有深度理解的高级工程师。你对 CoPaw 项目的架构、设计模式和实现细节了如指掌。
+
+## 领域知识：个人 AI 助手
+
+CoPaw 属于 **本地优先的个人 AI 助手** 类项目（类似 OpenClaw、Open Interpreter、Agentic 等），核心理念：
+
+1. **本地运行、数据可控**：所有数据存储在用户本地文件系统（`~/.copaw/`），无需外部数据库
+2. **多频道统一入口**：一个 Agent 实例同时服务多个聊天平台（钉钉、飞书、QQ、Discord、iMessage、Web Console）
+3. **ReAct Agent 范式**：Think → Act → Observe 循环，Agent 自主调用工具完成任务
+4. **Skills 插件化**：能力通过 SKILL.md 文件定义（不是代码插件），注入 Agent 上下文
+5. **记忆管理**：短期对话上下文 + 长期语义记忆，自动压缩防止上下文溢出
+6. **MCP 协议集成**：通过 Model Context Protocol 连接外部工具服务
+
+## 项目架构速查
+
+### 分层架构
+
+```
+用户 → 频道(Channel) → ChannelManager(队列+Worker)
+                            → AgentRunner(会话管理)
+                                → CoPawAgent(ReAct Loop)
+                                    → LLM + Tools + Skills + Memory
+```
+
+### 核心模块定位
+
+| 要改什么 | 去哪里找 |
+|---------|---------|
+| Agent 推理逻辑 | `src/copaw/agents/react_agent.py` (CoPawAgent) |
+| 内置工具 | `src/copaw/agents/tools/` (shell, file_io, browser_control 等) |
+| 内置 Skills | `src/copaw/agents/skills/*/SKILL.md` |
+| 系统提示词 | `src/copaw/agents/prompt.py` + `agents/md_files/` |
+| 生命周期钩子 | `src/copaw/agents/hooks/` (bootstrap, memory_compaction) |
+| 记忆系统 | `src/copaw/agents/memory/` (copaw_memory, memory_manager) |
+| 频道实现 | `src/copaw/app/channels/` (base.py → 各频道子目录) |
+| 频道注册表 | `src/copaw/app/channels/registry.py` |
+| API 路由 | `src/copaw/app/routers/` (按功能模块分文件) |
+| 定时任务 | `src/copaw/app/crons/` (manager, executor, heartbeat) |
+| MCP 管理 | `src/copaw/app/mcp/` (manager, watcher) |
+| Runner/会话 | `src/copaw/app/runner/` (runner, session, manager) |
+| 配置模型 | `src/copaw/config/config.py` (Pydantic Config) |
+| 配置热重载 | `src/copaw/config/watcher.py` (ConfigWatcher) |
+| LLM 提供商 | `src/copaw/providers/` (registry, store, models) |
+| CLI 命令 | `src/copaw/cli/` (各 *_cmd.py) |
+| 全局常量 | `src/copaw/constant.py` |
+| 前端页面 | `console/src/pages/` |
+| 前端 API 调用 | `console/src/api/modules/` |
+| i18n 翻译 | `console/src/locales/{en,zh}.json` |
+
+### 应用启动顺序
+
+```
+_app.py lifespan():
+  1. AgentRunner.start()
+  2. MCPClientManager.init_from_config()
+  3. ChannelManager.from_config() + start_all()
+  4. CronManager.start()
+  5. ChatManager 初始化
+  6. ConfigWatcher.start()
+  7. MCPConfigWatcher.start()
+```
+
+## 关键设计模式
+
+### 1. BaseChannel 模式（频道扩展）
+
+所有频道继承 `BaseChannel`，核心接口：
+
+```python
+class MyChannel(BaseChannel):
+    channel: ChannelType = "my_channel"
+    uses_manager_queue: bool = True  # 使用 Manager 的异步队列
+
+    @classmethod
+    def from_config(cls, process, config, on_reply_sent, show_tool_details):
+        ...
+
+    def build_agent_request_from_native(self, native_payload):
+        # 将平台原生消息 → AgentRequest
+        ...
+
+    async def send(self, to_handle, text, meta):
+        # 向平台发送消息
+        ...
+
+    async def start(self):
+        # 启动连接（WebSocket/轮询等）
+        ...
+
+    async def stop(self):
+        ...
+```
+
+新频道必须在 `registry.py` 的 `BUILTIN_CHANNELS` 中注册，或放在 `working/custom_channels/` 自动发现。
+
+ChannelManager 为每个频道创建异步队列（maxsize=1000）和 4 个 Worker 协程，支持消息防抖与合并。
+
+### 2. SKILL.md 格式（Skills 扩展）
+
+Skills 不是代码插件，而是 **YAML front matter + Markdown 指令** 文件：
+
+```markdown
+---
+name: my_skill
+description: "触发条件描述..."
+metadata:
+  copaw:
+    emoji: "🔧"
+    requires: {}
+---
+
+# Skill 标题
+
+Markdown 格式的详细指令，会注入 Agent 上下文。
+```
+
+三层存储：`builtin skills/ → customized_skills/ → active_skills/`。Agent 只加载 `active_skills/`。
+
+### 3. Pydantic 配置模型
+
+所有配置用 Pydantic BaseModel 定义（`config/config.py`、`crons/models.py`、`providers/models.py`）。
+JSON 文件读写使用原子写入（先写 .tmp 再 replace）。
+
+### 4. Repository 模式（数据持久化）
+
+Cron jobs 和 Chats 都采用 Base → Json 实现的 Repository 模式：
+- `BaseChatRepository` → `JsonChatRepository` (chats.json)
+- `BaseJobRepository` → `JsonJobRepository` (jobs.json)
+
+### 5. 懒加载（避免重依赖导入）
+
+`agents/__init__.py` 用 `__getattr__` 懒加载 CoPawAgent，CLI 导入时不拉起 AgentScope/Playwright。
+
+### 6. 记忆压缩钩子
+
+`MemoryCompactionHook` 在 `pre_reasoning` 阶段自动触发：
+- 阈值 = `max_input_length × MEMORY_COMPACT_RATIO` (默认 0.7)
+- 保留最近 `MEMORY_COMPACT_KEEP_RECENT` 条消息 (默认 3)
+- 旧消息标记为 COMPRESSED，摘要存入 `_compressed_summary`
+
+### 7. App State 依赖注入
+
+通过 `app.state` 共享核心组件，路由中通过 `request.app.state.runner` 等访问。
+
+## 编码规范
+
+### Python
+
+- **行宽 79 字符**（Black 格式化）
+- **双引号字符串**
+- **尾逗号**（pre-commit 强制）
+- **文件头** `# -*- coding: utf-8 -*-`
+- **类型注解**：使用 `typing` 或 Python 3.10+ 语法（`X | None`）
+- **日志**：`logger = logging.getLogger(__name__)`
+- **异步**：频道和 Runner 层使用 async/await
+- **Pydantic**：配置和 API 模型使用 Pydantic v2 (BaseModel, Field, field_validator)
+
+### TypeScript (Console 前端)
+
+- **Prettier 3.0** 格式化
+- **ESLint 9.x** 检查
+- **组件模式**：页面 = `index.tsx` + `use*.ts` hook + `components/` 子组件
+- **API 调用**：`api/modules/*.ts` 按模块分离
+- **i18n**：所有用户可见文本使用 `t("key")`，同时更新 `en.json` 和 `zh.json`
+- **Ant Design 5**：使用 antd 组件，`@agentscope-ai/design` 主题
+
+### 提交规范
+
+Conventional Commits: `<type>(<scope>): <subject>`
+- Types: feat, fix, docs, style, refactor, perf, test, chore
+- Scope: channels, skills, agents, crons, console, config, providers, mcp, cli, deploy
+
+## 常见开发任务指南
+
+### 添加新的内置工具
+
+1. 在 `src/copaw/agents/tools/` 创建工具函数文件
+2. 函数必须返回 `ToolResponse(content=[TextBlock(...)])`
+3. 在 `tools/__init__.py` 导出
+4. 在 `react_agent.py` 的 `_create_toolkit()` 中 `toolkit.register_tool_function(your_func)`
+
+### 添加新的频道
+
+1. 在 `src/copaw/app/channels/` 创建子目录和 `channel.py`
+2. 继承 `BaseChannel`，实现 `send()`, `start()`, `stop()`, `build_agent_request_from_native()`, `from_config()`
+3. 在 `registry.py` 的 `BUILTIN_CHANNELS` 字典中注册
+4. 在 `config/config.py` 添加对应的 `XxxConfig(BaseChannelConfig)` 和 `ChannelConfig` 字段
+5. 如需频道专用 SDK，在 `pyproject.toml` 的 `dependencies` 中添加
+
+### 添加新的 Skill
+
+1. 在 `src/copaw/agents/skills/<skill_name>/` 创建 `SKILL.md`
+2. 编写 YAML front matter（name, description, metadata）
+3. 编写 Markdown 指令（何时使用、如何操作）
+4. 可选添加 `references/`、`scripts/`、`assets/` 目录
+5. 启用：`SkillService.enable_skill(name)` 同步到 `active_skills/`
+
+### 添加新的 API 路由
+
+1. 在 `src/copaw/app/routers/` 创建路由文件
+2. 使用 `APIRouter(prefix="/your-prefix", tags=["your-tag"])`
+3. 在 `routers/__init__.py` 的 `api_router` 中 `include_router()`
+4. 通过 `request.app.state` 访问 Runner/Manager 等组件
+5. 如需前端支持：在 `console/src/api/modules/` 添加 API 调用，`api/types/` 添加类型
+
+### 添加新的前端页面
+
+1. 在 `console/src/pages/<Category>/<Feature>/` 创建目录
+2. 编写 `index.tsx`（页面）+ `use<Feature>.ts`（数据 hook）+ `components/`（子组件）
+3. 在 `layouts/MainLayout/index.tsx` 添加路由
+4. 在 `layouts/Sidebar.tsx` 添加侧边栏入口
+5. 在 `locales/en.json` 和 `locales/zh.json` 添加翻译
+
+### 修改配置结构
+
+1. 修改 `config/config.py` 中的 Pydantic 模型
+2. 确保向后兼容（新字段提供默认值）
+3. 如果影响频道配置：更新 `ChannelManager` 和 `ConfigWatcher` 的重载逻辑
+4. 如果影响前端：更新 `console/src/api/types/` 对应类型
+
+### Docker 相关修改
+
+- Dockerfile 位于 `deploy/Dockerfile`
+- supervisord 管理 4 个进程：dbus, xvfb (虚拟显示), xfce4 (桌面), app
+- 构建时执行 `copaw init --defaults --accept-security`
+- 容器内默认频道: `dingtalk,feishu,qq,console`（不含 imessage/discord）
+
+## 调试技巧
+
+- **Agent 运行出错**：查看 `query_error_dump.py` 写入的临时 JSON 文件，包含完整上下文
+- **频道消息不通**：检查 `ChannelManager` 的队列状态和 Worker 日志
+- **Skill 未加载**：确认 Skill 在 `active_skills/` 目录中（不是 `customized_skills/`）
+- **配置不生效**：检查 `ConfigWatcher` 是否启动，或手动重启服务
+- **MCP 连接失败**：查看 `MCPConfigWatcher` 的重试日志，检查 MCP 服务端进程
+- **记忆压缩异常**：检查 `MEMORY_STORE_BACKEND` 环境变量和 ReMe-AI 依赖
+- **前端 API 404**：确认路由已在 `routers/__init__.py` 中注册
+
+## 重要约束
+
+1. **不要在 `agents/skills/` 目录下放 Python 代码**——这里只有 SKILL.md 和资源文件
+2. **pre-commit hooks 排除 `*/skills/*` 路径**——Skill 文件可能包含示例代码
+3. **console 构建产物不提交到 git**——构建输出到 `src/copaw/console/`
+4. **JSON 写入必须使用原子写入**——先 .tmp 再 replace
+5. **新增频道 SDK 可能有平台限制**——如 iMessage 仅 macOS，MLX 仅 Apple Silicon
+6. **CoPawAgent 的 `__init__` 参数 `max_input_length` 单位是 token**——默认 128K
+7. **频道 session_id 格式**：`{channel_type}:{user_id}` 或频道自定义（如飞书 `feishu:chat_id:<id>`）
