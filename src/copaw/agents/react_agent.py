@@ -4,20 +4,24 @@
 This module provides the main CoPawAgent class built on ReActAgent,
 with integrated tools, skills, and memory management.
 """
+import asyncio
 import logging
 import os
-from typing import Any, List, Optional, Type
+from typing import Any, List, Literal, Optional, Type
 
 from agentscope.agent import ReActAgent
+from agentscope.mcp import HttpStatefulClient, StdIOStatefulClient
+from agentscope.memory import InMemoryMemory
 from agentscope.message import Msg
 from agentscope.tool import Toolkit
+from anyio import ClosedResourceError
 from pydantic import BaseModel
 
 from .command_handler import CommandHandler
 from .hooks import BootstrapHook, MemoryCompactionHook
-from .memory import CoPawInMemoryMemory
 from .model_factory import create_model_and_formatter
 from .prompt import build_system_prompt_from_working_dir
+from .tool_guard_mixin import ToolGuardMixin
 from .skills_manager import (
     ensure_skills_initialized,
     get_working_skills_dir,
@@ -25,28 +29,33 @@ from .skills_manager import (
 )
 from .tools import (
     browser_use,
-    create_memory_search_tool,
     desktop_screenshot,
     edit_file,
     execute_shell_command,
     get_current_time,
+    get_token_usage,
     read_file,
     send_file_to_user,
+    set_user_timezone,
+    view_image,
     write_file,
+    create_memory_search_tool,
 )
 from .utils import process_file_and_media_blocks_in_message
 from ..agents.memory import MemoryManager
 from ..config import load_config
 from ..constant import (
-    MEMORY_COMPACT_KEEP_RECENT,
     MEMORY_COMPACT_RATIO,
     WORKING_DIR,
 )
 
 logger = logging.getLogger(__name__)
 
+# Valid namesake strategies for tool registration
+NamesakeStrategy = Literal["override", "skip", "raise", "rename"]
 
-class CoPawAgent(ReActAgent):
+
+class CoPawAgent(ToolGuardMixin, ReActAgent):
     """CoPaw Agent with integrated tools, skills, and memory management.
 
     This agent extends ReActAgent with:
@@ -55,6 +64,15 @@ class CoPawAgent(ReActAgent):
     - Memory management with auto-compaction
     - Bootstrap guidance for first-time setup
     - System command handling (/compact, /new, etc.)
+    - Tool-guard security interception (via ToolGuardMixin)
+
+    MRO note
+    ~~~~~~~~
+    ``ToolGuardMixin`` overrides ``_acting`` and ``_reasoning`` via
+    Python's MRO: CoPawAgent → ToolGuardMixin → ReActAgent.  If you
+    add a ``_acting`` or ``_reasoning`` override in this class, you
+    **must** call ``super()._acting(...)`` / ``super()._reasoning(...)``
+    so the guard interception remains active.
     """
 
     def __init__(
@@ -63,8 +81,10 @@ class CoPawAgent(ReActAgent):
         enable_memory_manager: bool = True,
         mcp_clients: Optional[List[Any]] = None,
         memory_manager: MemoryManager | None = None,
+        request_context: Optional[dict[str, str]] = None,
         max_iters: int = 50,
         max_input_length: int = 128 * 1024,  # 128K = 131072 tokens
+        namesake_strategy: NamesakeStrategy = "skip",
     ):
         """Initialize CoPawAgent.
 
@@ -79,10 +99,15 @@ class CoPawAgent(ReActAgent):
                 (default: 50)
             max_input_length: Maximum input length in tokens for model
                 context window (default: 128K = 131072)
+            namesake_strategy: Strategy to handle namesake tool functions.
+                Options: "override", "skip", "raise", "rename"
+                (default: "skip")
         """
         self._env_context = env_context
+        self._request_context = dict(request_context or {})
         self._max_input_length = max_input_length
         self._mcp_clients = mcp_clients or []
+        self._namesake_strategy = namesake_strategy
 
         # Memory compaction threshold: configurable ratio of max_input_length
         self._memory_compact_threshold = int(
@@ -90,7 +115,7 @@ class CoPawAgent(ReActAgent):
         )
 
         # Initialize toolkit with built-in tools
-        toolkit = self._create_toolkit()
+        toolkit = self._create_toolkit(namesake_strategy=namesake_strategy)
 
         # Load and register skills
         self._register_skills(toolkit)
@@ -107,7 +132,7 @@ class CoPawAgent(ReActAgent):
             model=model,
             sys_prompt=sys_prompt,
             toolkit=toolkit,
-            memory=CoPawInMemoryMemory(),
+            memory=InMemoryMemory(),
             formatter=formatter,
             max_iters=max_iters,
         )
@@ -116,13 +141,13 @@ class CoPawAgent(ReActAgent):
         self._setup_memory_manager(
             enable_memory_manager,
             memory_manager,
+            namesake_strategy,
         )
 
         # Setup command handler
         self.command_handler = CommandHandler(
             agent_name=self.name,
             memory=self.memory,
-            formatter=self.formatter,
             memory_manager=self.memory_manager,
             enable_memory_manager=self._enable_memory_manager,
         )
@@ -130,23 +155,57 @@ class CoPawAgent(ReActAgent):
         # Register hooks
         self._register_hooks()
 
-    def _create_toolkit(self) -> Toolkit:
+    def _create_toolkit(
+        self,
+        namesake_strategy: NamesakeStrategy = "skip",
+    ) -> Toolkit:
         """Create and populate toolkit with built-in tools.
+
+        Args:
+            namesake_strategy: Strategy to handle namesake tool functions.
+                Options: "override", "skip", "raise", "rename"
+                (default: "skip")
 
         Returns:
             Configured toolkit instance
         """
         toolkit = Toolkit()
 
-        # Register built-in tools
-        toolkit.register_tool_function(execute_shell_command)
-        toolkit.register_tool_function(read_file)
-        toolkit.register_tool_function(write_file)
-        toolkit.register_tool_function(edit_file)
-        toolkit.register_tool_function(browser_use)
-        toolkit.register_tool_function(desktop_screenshot)
-        toolkit.register_tool_function(send_file_to_user)
-        toolkit.register_tool_function(get_current_time)
+        # Load config to check which tools are enabled
+        config = load_config()
+        enabled_tools = {}
+        if hasattr(config, "tools") and hasattr(config.tools, "builtin_tools"):
+            enabled_tools = {
+                name: tool_config.enabled
+                for name, tool_config in config.tools.builtin_tools.items()
+            }
+
+        # Map of tool functions
+        tool_functions = {
+            "execute_shell_command": execute_shell_command,
+            "read_file": read_file,
+            "write_file": write_file,
+            "edit_file": edit_file,
+            "browser_use": browser_use,
+            "desktop_screenshot": desktop_screenshot,
+            "view_image": view_image,
+            "send_file_to_user": send_file_to_user,
+            "get_current_time": get_current_time,
+            "set_user_timezone": set_user_timezone,
+            "get_token_usage": get_token_usage,
+        }
+
+        # Register only enabled tools
+        for tool_name, tool_func in tool_functions.items():
+            # If tool not in config, enable by default (backward compatibility)
+            if enabled_tools.get(tool_name, True):
+                toolkit.register_tool_function(
+                    tool_func,
+                    namesake_strategy=namesake_strategy,
+                )
+                logger.debug("Registered tool: %s", tool_name)
+            else:
+                logger.debug("Skipped disabled tool: %s", tool_name)
 
         return toolkit
 
@@ -183,19 +242,21 @@ class CoPawAgent(ReActAgent):
         """
         sys_prompt = build_system_prompt_from_working_dir()
         if self._env_context is not None:
-            sys_prompt = self._env_context + "\n\n" + sys_prompt
+            sys_prompt = sys_prompt + "\n\n" + self._env_context
         return sys_prompt
 
     def _setup_memory_manager(
         self,
         enable_memory_manager: bool,
         memory_manager: MemoryManager | None,
+        namesake_strategy: NamesakeStrategy,
     ) -> None:
         """Setup memory manager and register memory search tool if enabled.
 
         Args:
             enable_memory_manager: Whether to enable memory manager
             memory_manager: Optional memory manager instance
+            namesake_strategy: Strategy to handle namesake tool functions
         """
         # Check env var: if ENABLE_MEMORY_MANAGER=false, disable memory manager
         env_enable_mm = os.getenv("ENABLE_MEMORY_MANAGER", "")
@@ -207,15 +268,20 @@ class CoPawAgent(ReActAgent):
 
         # Register memory_search tool if enabled and available
         if self._enable_memory_manager and self.memory_manager is not None:
+            # update memory manager
+            self.memory = self.memory_manager.get_in_memory_memory()
             self.memory_manager.chat_model = self.model
             self.memory_manager.formatter = self.formatter
 
-            memory_search_tool = create_memory_search_tool(self.memory_manager)
-            self.toolkit.register_tool_function(memory_search_tool)
+            # Register memory_search as a tool function
+            self.toolkit.register_tool_function(
+                create_memory_search_tool(self.memory_manager),
+                namesake_strategy=namesake_strategy,
+            )
             logger.debug("Registered memory_search tool")
 
     def _register_hooks(self) -> None:
-        """Register pre-reasoning hooks for bootstrap and memory compaction."""
+        """Register pre-reasoning and pre-acting hooks."""
         # Bootstrap hook - checks BOOTSTRAP.md on first interaction
         config = load_config()
         bootstrap_hook = BootstrapHook(
@@ -233,8 +299,6 @@ class CoPawAgent(ReActAgent):
         if self._enable_memory_manager and self.memory_manager is not None:
             memory_compact_hook = MemoryCompactionHook(
                 memory_manager=self.memory_manager,
-                memory_compact_threshold=self._memory_compact_threshold,
-                keep_recent=MEMORY_COMPACT_KEEP_RECENT,
             )
             self.register_instance_hook(
                 hook_type="pre_reasoning",
@@ -259,10 +323,181 @@ class CoPawAgent(ReActAgent):
                 msg.content = self.sys_prompt
             break
 
-    async def register_mcp_clients(self) -> None:
-        """Register MCP clients on this agent's toolkit after construction."""
-        for client in self._mcp_clients:
-            await self.toolkit.register_mcp_client(client)
+    async def register_mcp_clients(
+        self,
+        namesake_strategy: NamesakeStrategy = "skip",
+    ) -> None:
+        """Register MCP clients on this agent's toolkit after construction.
+
+        Args:
+            namesake_strategy: Strategy to handle namesake tool functions.
+                Options: "override", "skip", "raise", "rename"
+                (default: "skip")
+        """
+        for i, client in enumerate(self._mcp_clients):
+            client_name = getattr(client, "name", repr(client))
+            try:
+                await self.toolkit.register_mcp_client(
+                    client,
+                    namesake_strategy=namesake_strategy,
+                )
+            except (ClosedResourceError, asyncio.CancelledError) as error:
+                if self._should_propagate_cancelled_error(error):
+                    raise
+                logger.warning(
+                    "MCP client '%s' session interrupted while listing tools; "
+                    "trying recovery",
+                    client_name,
+                )
+                recovered_client = await self._recover_mcp_client(client)
+                if recovered_client is not None:
+                    self._mcp_clients[i] = recovered_client
+                    try:
+                        await self.toolkit.register_mcp_client(
+                            recovered_client,
+                            namesake_strategy=namesake_strategy,
+                        )
+                        continue
+                    except asyncio.CancelledError as recover_error:
+                        if self._should_propagate_cancelled_error(
+                            recover_error,
+                        ):
+                            raise
+                        logger.warning(
+                            "MCP client '%s' registration cancelled after "
+                            "recovery, skipping",
+                            client_name,
+                        )
+                    except Exception as e:  # pylint: disable=broad-except
+                        logger.warning(
+                            "MCP client '%s' still unavailable after "
+                            "recovery, skipping: %s",
+                            client_name,
+                            e,
+                        )
+                else:
+                    logger.warning(
+                        "MCP client '%s' recovery failed, skipping",
+                        client_name,
+                    )
+            except Exception as e:  # pylint: disable=broad-except
+                logger.exception(
+                    "Unexpected error registering MCP client '%s': %s",
+                    client_name,
+                    e,
+                )
+                raise
+
+    async def _recover_mcp_client(self, client: Any) -> Any | None:
+        """Recover MCP client from broken session and return healthy client."""
+        if await self._reconnect_mcp_client(client):
+            return client
+
+        rebuilt_client = self._rebuild_mcp_client(client)
+        if rebuilt_client is None:
+            return None
+
+        if await self._reconnect_mcp_client(rebuilt_client):
+            return self._reuse_shared_client_reference(
+                original_client=client,
+                rebuilt_client=rebuilt_client,
+            )
+
+        return None
+
+    @staticmethod
+    def _reuse_shared_client_reference(
+        original_client: Any,
+        rebuilt_client: Any,
+    ) -> Any:
+        """Keep manager-shared client reference stable after rebuild."""
+        original_dict = getattr(original_client, "__dict__", None)
+        rebuilt_dict = getattr(rebuilt_client, "__dict__", None)
+        if isinstance(original_dict, dict) and isinstance(rebuilt_dict, dict):
+            original_dict.update(rebuilt_dict)
+            return original_client
+        return rebuilt_client
+
+    @staticmethod
+    def _should_propagate_cancelled_error(error: BaseException) -> bool:
+        """Only swallow MCP-internal cancellations, not task cancellation."""
+        if not isinstance(error, asyncio.CancelledError):
+            return False
+
+        task = asyncio.current_task()
+        if task is None:
+            return False
+
+        cancelling = getattr(task, "cancelling", None)
+        if callable(cancelling):
+            return cancelling() > 0
+
+        # Python < 3.11: Task.cancelling() is unavailable.
+        # Fall back to propagating CancelledError to avoid swallowing
+        # genuine task cancellations when we cannot inspect the state.
+        return True
+
+    @staticmethod
+    async def _reconnect_mcp_client(
+        client: Any,
+        timeout: float = 60.0,
+    ) -> bool:
+        """Best-effort reconnect for stateful MCP clients."""
+        close_fn = getattr(client, "close", None)
+        if callable(close_fn):
+            try:
+                await close_fn()
+            except asyncio.CancelledError:  # pylint: disable=try-except-raise
+                raise
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+        connect_fn = getattr(client, "connect", None)
+        if not callable(connect_fn):
+            return False
+
+        try:
+            await asyncio.wait_for(connect_fn(), timeout=timeout)
+            return True
+        except asyncio.CancelledError:  # pylint: disable=try-except-raise
+            raise
+        except asyncio.TimeoutError:
+            return False
+        except Exception:  # pylint: disable=broad-except
+            return False
+
+    @staticmethod
+    def _rebuild_mcp_client(client: Any) -> Any | None:
+        """Rebuild a fresh MCP client instance from stored config metadata."""
+        rebuild_info = getattr(client, "_copaw_rebuild_info", None)
+        if not isinstance(rebuild_info, dict):
+            return None
+
+        transport = rebuild_info.get("transport")
+        name = rebuild_info.get("name")
+
+        try:
+            if transport == "stdio":
+                rebuilt_client = StdIOStatefulClient(
+                    name=name,
+                    command=rebuild_info.get("command"),
+                    args=rebuild_info.get("args", []),
+                    env=rebuild_info.get("env", {}),
+                    cwd=rebuild_info.get("cwd"),
+                )
+                setattr(rebuilt_client, "_copaw_rebuild_info", rebuild_info)
+                return rebuilt_client
+
+            rebuilt_client = HttpStatefulClient(
+                name=name,
+                transport=transport,
+                url=rebuild_info.get("url"),
+                headers=rebuild_info.get("headers"),
+            )
+            setattr(rebuilt_client, "_copaw_rebuild_info", rebuild_info)
+            return rebuilt_client
+        except Exception:  # pylint: disable=broad-except
+            return None
 
     async def reply(
         self,
@@ -296,3 +531,19 @@ class CoPawAgent(ReActAgent):
 
         # Normal message processing
         return await super().reply(msg=msg, structured_model=structured_model)
+
+    async def interrupt(self, msg: Msg | list[Msg] | None = None) -> None:
+        """Interrupt the current reply process and wait for cleanup."""
+        if self._reply_task and not self._reply_task.done():
+            task = self._reply_task
+            task.cancel(msg)
+            try:
+                await task
+            except asyncio.CancelledError:
+                if not task.cancelled():
+                    raise
+            except Exception:
+                logger.warning(
+                    "Exception occurred during interrupt cleanup",
+                    exc_info=True,
+                )

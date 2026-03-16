@@ -79,9 +79,13 @@ def sender_from_chatbot_message(incoming_message: Any) -> tuple[str, bool]:
         or ""
     )
     sender_id = str(sender_id).strip() if sender_id else ""
-    suffix = sender_id[-4:] if len(sender_id) >= 4 else (sender_id or "????")
-    sender = f"{(nickname or 'unknown')}#{suffix}"
-    skip = not suffix and not nickname
+    has_sender_id = bool(sender_id)
+    has_nickname = bool(nickname)
+
+    suffix = sender_id[-4:] if len(sender_id) >= 4 else sender_id
+    sender = f"{(nickname or 'unknown')}#{(suffix or '????')}"
+
+    skip = (not has_sender_id) and (not has_nickname)
     return sender, skip
 
 
@@ -93,6 +97,24 @@ def conversation_id_from_chatbot_message(incoming_message: Any) -> str:
         None,
     )
     return str(cid).strip() if cid else ""
+
+
+def conversation_type_from_chatbot_message(incoming_message: Any) -> str:
+    """Extract conversation_type from DingTalk ChatbotMessage.
+
+    Returns:
+        "dm" for direct message (conversationType=1)
+        "group" for group chat (conversationType=2)
+        "dm" as default if not specified
+    """
+    conv_type = getattr(incoming_message, "conversationType", None) or getattr(
+        incoming_message,
+        "conversation_type",
+        None,
+    )
+    if conv_type:
+        return "group" if str(conv_type) == "2" else "dm"
+    return "dm"
 
 
 def short_session_id_from_conversation_id(conversation_id: str) -> str:

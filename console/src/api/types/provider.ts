@@ -7,20 +7,29 @@ export interface ProviderInfo {
   id: string;
   name: string;
   api_key_prefix: string;
+  chat_model: string;
   /** Built-in models (for built-in providers) or all models (for custom). */
   models: ModelInfo[];
   /** User-added models (deletable). Only populated for built-in providers. */
   extra_models: ModelInfo[];
   is_custom: boolean;
   is_local: boolean;
-  has_api_key: boolean;
-  current_api_key: string;
-  current_base_url: string;
+  /** Whether this provider supports fetching available models from the provider's API. */
+  support_model_discovery: boolean;
+  /** True when the base_url should be frozen (not editable). */
+  freeze_url: boolean;
+  /** True when an API key is required for this provider. */
+  require_api_key: boolean;
+  api_key: string;
+  base_url: string;
+  generate_kwargs: Record<string, unknown>;
 }
 
 export interface ProviderConfigRequest {
   api_key?: string;
   base_url?: string;
+  chat_model?: string;
+  generate_kwargs?: Record<string, unknown>;
 }
 
 export interface ModelSlotConfig {
@@ -29,7 +38,7 @@ export interface ModelSlotConfig {
 }
 
 export interface ActiveModelsInfo {
-  active_llm: ModelSlotConfig;
+  active_llm?: ModelSlotConfig;
 }
 
 export interface ModelSlotRequest {
@@ -44,6 +53,7 @@ export interface CreateCustomProviderRequest {
   name: string;
   default_base_url?: string;
   api_key_prefix?: string;
+  chat_model?: string;
   models?: ModelInfo[];
 }
 
@@ -102,4 +112,29 @@ export interface OllamaDownloadTaskResponse {
   name: string;
   error: string | null;
   result: OllamaModelResponse | null;
+}
+
+/* ---- Test Connection ---- */
+
+export interface TestConnectionResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface TestProviderRequest {
+  api_key?: string;
+  base_url?: string;
+  chat_model?: string;
+  generate_kwargs?: Record<string, unknown>;
+}
+
+export interface TestModelRequest {
+  model_id: string;
+}
+
+export interface DiscoverModelsResponse {
+  success: boolean;
+  message: string;
+  models: ModelInfo[];
+  added_count: number;
 }

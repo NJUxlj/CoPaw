@@ -6,6 +6,7 @@ export { getApiUrl, getApiToken } from "./config";
 
 import { rootApi } from "./modules/root";
 import { channelApi } from "./modules/channel";
+import { heartbeatApi } from "./modules/heartbeat";
 import { cronJobApi } from "./modules/cronjob";
 import { chatApi, sessionApi } from "./modules/chat";
 import { envApi } from "./modules/env";
@@ -16,6 +17,10 @@ import { workspaceApi } from "./modules/workspace";
 import { localModelApi } from "./modules/localModel";
 import { ollamaModelApi } from "./modules/ollamaModel";
 import { mcpApi } from "./modules/mcp";
+import { tokenUsageApi } from "./modules/tokenUsage";
+import { toolsApi } from "./modules/tools";
+import { securityApi } from "./modules/security";
+import { userTimezoneApi } from "./modules/userTimezone";
 
 export const api = {
   // Root
@@ -23,6 +28,9 @@ export const api = {
 
   // Channels
   ...channelApi,
+
+  // Heartbeat
+  ...heartbeatApi,
 
   // Cron Jobs
   ...cronJobApi,
@@ -56,6 +64,17 @@ export const api = {
 
   // MCP Clients
   ...mcpApi,
+
+  // Token Usage
+  ...tokenUsageApi,
+  // Tools
+  ...toolsApi,
+
+  // Security
+  ...securityApi,
+
+  // User Timezone
+  ...userTimezoneApi,
 };
 
 export default api;

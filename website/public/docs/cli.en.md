@@ -28,7 +28,7 @@ copaw init --force      # Overwrite existing config files
 1. **Heartbeat** — interval (e.g. `30m`), target (`main` / `last`), optional
    active hours.
 2. **Show tool details** — whether tool call details appear in channel messages.
-3. **Language** — `zh` or `en` for agent persona files (SOUL.md, etc.).
+3. **Language** — `zh` / `en` / `ru` for agent persona files (SOUL.md, etc.).
 4. **Channels** — optionally configure iMessage / Discord / DingTalk / Feishu /
    QQ / Console.
 5. **LLM provider** — select provider, enter API key, choose model (**required**).
@@ -63,12 +63,32 @@ Once `copaw app` is running, open `http://127.0.0.1:8088/` in your browser to
 access the **Console** — a web UI for chat, channels, cron, skills, models,
 and more. See [Console](./console) for a full walkthrough.
 
-If the frontend was not built, the root URL returns `{"message": "Hello World"}`
-but the API still works.
+If the frontend was not built, the root URL returns a JSON message like `{"message": "CoPaw Web Console is not available."}` but the API still works.
 
 **To build the frontend:** in the project's `console/` directory run
-`npm ci && npm run build` (output in `console/dist/`). Docker images and pip
-packages already include the Console.
+`npm ci && npm run build`, then copy the output to the package directory:
+`mkdir -p src/copaw/console && cp -R console/dist/. src/copaw/console/`.
+Docker images and pip packages already include the Console.
+
+### copaw daemon
+
+Inspect status, version, and recent logs without starting a conversation. Same
+behavior as sending `/daemon status` etc. in chat (CLI can show local info when
+the app is not running).
+
+| Command                      | Description                                                                               |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `copaw daemon status`        | Status (config, working dir, memory manager)                                              |
+| `copaw daemon restart`       | Print instructions (in-chat /daemon restart does in-process reload)                       |
+| `copaw daemon reload-config` | Re-read and validate config (channel/MCP changes need /daemon restart or process restart) |
+| `copaw daemon version`       | Version and paths                                                                         |
+| `copaw daemon logs [-n N]`   | Last N lines of log (default 100; from `copaw.log` in working dir)                        |
+
+```bash
+copaw daemon status
+copaw daemon version
+copaw daemon logs -n 50
+```
 
 ---
 
@@ -138,7 +158,7 @@ copaw models remove-local <model_id> --yes   # skip confirmation
 
 CoPaw integrates with Ollama to run models locally. Models are dynamically loaded from your Ollama daemon — install Ollama first from [ollama.com](https://ollama.com).
 
-Install the Ollama SDK: `pip install ollama`
+Install the Ollama SDK: `pip install 'copaw[ollama]'` (or re-run the installer with `--extras ollama`)
 
 ```bash
 # Download an Ollama model
@@ -294,12 +314,12 @@ JSON structure matches the output of `copaw cron get <job_id>`.
 
 ### Additional options
 
-| Option                       | Default | Description                                           |
-| ---------------------------- | ------- | ----------------------------------------------------- |
-| `--timezone`                 | `UTC`   | Timezone for the cron schedule                        |
-| `--enabled` / `--no-enabled` | enabled | Create enabled or disabled                            |
-| `--mode`                     | `final` | `stream` (incremental) or `final` (complete response) |
-| `--base-url`                 | auto    | Override the API base URL                             |
+| Option                       | Default       | Description                                                              |
+| ---------------------------- | ------------- | ------------------------------------------------------------------------ |
+| `--timezone`                 | user timezone | Timezone for the cron schedule (defaults to `user_timezone` from config) |
+| `--enabled` / `--no-enabled` | enabled       | Create enabled or disabled                                               |
+| `--mode`                     | `final`       | `stream` (incremental) or `final` (complete response)                    |
+| `--base-url`                 | auto          | Override the API base URL                                                |
 
 ### Cron expression cheat sheet
 

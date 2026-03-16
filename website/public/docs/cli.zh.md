@@ -25,7 +25,7 @@ copaw init --force      # 覆盖已有配置文件
 
 1. **心跳** —— 间隔（如 `30m`）、目标（`main` / `last`）、可选活跃时间段。
 2. **工具详情** —— 是否在频道消息中显示工具调用细节。
-3. **语言** —— Agent 人设文件（SOUL.md 等）使用 `zh` 或 `en`。
+3. **语言** —— Agent 人设文件（SOUL.md 等）使用 `zh` / `en` / `ru`。
 4. **频道** —— 可选配置 iMessage / Discord / DingTalk / Feishu / QQ / Console。
 5. **LLM 提供商** —— 选择提供商、输入 API Key、选择模型（**必选**）。
 6. **技能** —— 全部启用 / 不启用 / 自定义选择。
@@ -57,10 +57,30 @@ copaw app --log-level debug           # 详细日志
 `copaw app` 启动后，在浏览器打开 `http://127.0.0.1:8088/` 即可进入 **控制台** ——
 一个用于对话、频道、定时任务、技能、模型等的 Web 管理界面。详见 [控制台](./console)。
 
-若未构建前端，根路径返回 `{"message": "Hello World"}`，API 仍可正常使用。
+若未构建前端，根路径会返回类似 `{"message": "CoPaw Web Console is not available."}` 的提示信息（实际文案可能调整），API 仍可正常使用。
 
-**构建方式：** 在项目 `console/` 目录下执行 `npm ci && npm run build`，产物在
-`console/dist/`。Docker 镜像或 pip 安装包已内置控制台，无需单独构建。
+**构建方式：** 在项目 `console/` 目录下执行 `npm ci && npm run build`，
+然后将构建产物复制到包目录：
+`mkdir -p src/copaw/console && cp -R console/dist/. src/copaw/console/`。
+Docker 镜像或 pip 安装包已内置控制台，无需单独构建。
+
+### copaw daemon
+
+查看运行状态、版本、最近日志等，无需启动对话。与在对话中发送 `/daemon status` 等效果一致（CLI 无进程时可查看本地信息）。
+
+| 命令                         | 说明                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| `copaw daemon status`        | 状态（配置、工作目录、记忆服务）                                               |
+| `copaw daemon restart`       | 打印说明（在对话中用 /daemon restart 可进程内重载）                            |
+| `copaw daemon reload-config` | 重新读取并校验配置（频道/MCP 变更需在对话中 /daemon restart 或重启进程后生效） |
+| `copaw daemon version`       | 版本与路径                                                                     |
+| `copaw daemon logs [-n N]`   | 最近 N 行日志（默认 100，来自工作目录 `copaw.log`）                            |
+
+```bash
+copaw daemon status
+copaw daemon version
+copaw daemon logs -n 50
+```
 
 ---
 
@@ -128,7 +148,7 @@ copaw models remove-local <model_id> --yes   # 跳过确认
 
 CoPaw 集成 Ollama 以在本地运行模型。模型从 Ollama 守护进程动态加载——请先从 [ollama.com](https://ollama.com) 安装 Ollama。
 
-安装 Ollama SDK：`pip install ollama`
+安装 Ollama SDK：`pip install 'copaw[ollama]'`（或使用 `--extras ollama` 重新运行安装脚本）
 
 ```bash
 # 下载 Ollama 模型
@@ -282,12 +302,12 @@ JSON 结构见 `copaw cron get <job_id>` 的返回。
 
 ### 额外选项
 
-| 选项                         | 默认值  | 说明                                               |
-| ---------------------------- | ------- | -------------------------------------------------- |
-| `--timezone`                 | `UTC`   | Cron 调度时区                                      |
-| `--enabled` / `--no-enabled` | 启用    | 创建时启用或禁用                                   |
-| `--mode`                     | `final` | `stream`（逐步发送）或 `final`（完成后一次性发送） |
-| `--base-url`                 | 自动    | 覆盖 API 地址                                      |
+| 选项                         | 默认值   | 说明                                                  |
+| ---------------------------- | -------- | ----------------------------------------------------- |
+| `--timezone`                 | 用户时区 | Cron 调度时区（默认使用 config 中的 `user_timezone`） |
+| `--enabled` / `--no-enabled` | 启用     | 创建时启用或禁用                                      |
+| `--mode`                     | `final`  | `stream`（逐步发送）或 `final`（完成后一次性发送）    |
+| `--base-url`                 | 自动     | 覆盖 API 地址                                         |
 
 ### Cron 表达式速查
 

@@ -7,10 +7,12 @@
 - **控制台**（推荐）— 在 [控制台](./console) 的 **Control → Channels** 页面，点击频道卡片，在抽屉里启用并填写鉴权信息，保存即生效。
 - **手动编辑 `config.json`** — 默认在 `~/.copaw/config.json` （由 `copaw init` 生成），将需要的频道设 `enabled: true` 并填好鉴权信息；保存后自动重载，无需重启。
 
-所有频道都有两个通用字段：
+所有频道都有如下通用字段:
 
 - **enabled** — 是否启用
 - **bot_prefix** — 机器人回复前缀（如 `[BOT]`），方便区分
+- **filter_tool_messages** — （可选，默认 `false`）过滤工具调用和输出消息，不发送给用户。设为 `true` 可隐藏工具执行详情。
+- **filter_thinking** — （可选，默认 `false`）过滤模型的思考/推理内容，不发送给用户。设为 `true` 可隐藏 thinking 内容。
 
 下面按频道说明如何获取凭证并填写配置。
 
@@ -76,9 +78,12 @@
   "enabled": true,
   "bot_prefix": "[BOT]",
   "client_id": "你的 Client ID",
-  "client_secret": "你的 Client Secret"
+  "client_secret": "你的 Client Secret",
+  "filter_tool_messages": false
 }
 ```
+
+- 若希望隐藏工具执行详情，可设置 `filter_tool_messages: true`。
 
 保存后若服务已运行会自动重载；未运行则执行 `copaw app` 启动。
 
@@ -164,7 +169,7 @@
 
 7. 在「事件与回调」中，点击「事件配置」，选择订阅方式为**长连接（WebSocket）** 模式（无需公网 IP）
 
-> 注：**操作顺序**为先配置 App ID/Secret → 启动 `copaw app` → 再在开放平台配置长连接，如果此处仍显示错误，尝试先暂停copaw服务并重新启动 `copaw app`。
+> 注：**操作顺序**为先配置 App ID/Secret → 启动 `copaw app` → 再在开放平台配置长连接，如果此处仍显示错误，尝试先暂停 CoPaw 服务并重新启动 `copaw app`。
 
 ![websocket](https://img.alicdn.com/imgextra/i2/O1CN01LQwKON1x7QMNP41kC_!!6000000006396-2-tps-4082-2126.png)
 
@@ -199,7 +204,7 @@
 
 其他字段（encrypt_key、verification_token、media_dir）可选，WebSocket 模式可不填，有默认值。依赖：`pip install lark-oapi`，然后 `copaw app`。如果你使用 SOCKS 代理联网，还需安装 `python-socks`（例如 `pip install python-socks`），否则可能报错：`python-socks is required to use a SOCKS proxy`。
 
-> 注: **App ID** 和 **App Secret** 信息也可以在Console前端填写，但需重启copaw服务，才能继续配置长链接的操作。
+> 注: **App ID** 和 **App Secret** 信息也可以在Console前端填写，但需重启 CoPaw 服务，才能继续配置长链接的操作。
 > ![console](https://img.alicdn.com/imgextra/i2/O1CN01k7UVrP1E2hZBAn0oF_!!6000000000294-2-tps-4082-2126.png)
 
 ### 机器人权限建议
@@ -247,30 +252,52 @@
 
 通过本地 iMessage 数据库轮询新消息并代为回复。
 
-### 前置准备
+1. 确保本地 **「信息」(Messages)** 已登录 Apple ID（系统设置里打开「信息」并登录）。
 
-- 确保本地 **「信息」(Messages)** 已登录 Apple ID（系统设置里打开「信息」并登录）。
-- 安装 **imsg**（用于访问 iMessage 数据库）：
-  ```bash
-  brew install steipete/tap/imsg
-  ```
-- 系统 iMessage 数据库默认路径为 `~/Library/Messages/chat.db`，若你改过系统路径，请填实际路径。
-- 应用需要 **完全磁盘访问权限**（系统设置 → 隐私与安全性 → 完全磁盘访问权限），否则无法读取 `chat.db`。
-- 仅限本地使用，数据不离开你的电脑。
+2. 安装 **imsg**（用于访问 iMessage 数据库）：
 
-### 填写 config.json
+   ```bash
+   brew install steipete/tap/imsg
+   ```
 
-```json
-"imessage": {
-  "enabled": true,
-  "bot_prefix": "[BOT]",
-  "db_path": "~/Library/Messages/chat.db",
-  "poll_sec": 1.0
-}
-```
+   > 如果 Intel 芯片 Mac 用户通过上述方式无法安装成功，需要先克隆源码再编译
+   >
+   > ```bash
+   > git clone https://github.com/steipete/imsg.git
+   > cd imsg
+   > make build
+   > sudo cp build/Release/imsg /usr/local/bin/
+   > cp ./bin/imsg /usr/local/bin/
+   > ```
 
-- **db_path** — iMessage 数据库路径
-- **poll_sec** — 轮询间隔（秒），默认 1 即可
+3. 为了使 iMessage 中的信息能被获取，需要 **终端** （或你用来运行 CoPaw 的 app） 和 **消息** 有 **完全磁盘访问权限**（系统设置 → 隐私与安全性 → 完全磁盘访问权限）。
+
+   ![权限](https://img.alicdn.com/imgextra/i2/O1CN01gCbMWX1S2c77mcoPo_!!6000000002189-2-tps-958-440.png)
+
+4. 填写 iMessage 数据库路径。默认路径为 `~/Library/Messages/chat.db`，若你改过系统路径，请填实际路径。有以下两种填写方案：
+
+   - 进入 **控制台 → 频道**，点击 **iMessage** 卡片，将 **Enable** 开关打开，在 **DB Path**中填写上面的路径，点击 **保存**。
+
+     ![控制台](https://img.alicdn.com/imgextra/i3/O1CN01ut2ooB1mxDNNtz1Qc_!!6000000005020-2-tps-3814-1954.png)
+
+   - 填写 config.json（路径通常为~/.copaw/config.json）：
+
+     ```json
+     "imessage": {
+     "enabled": true,
+     "bot_prefix": "[BOT]",
+     "db_path": "~/Library/Messages/chat.db",
+     "poll_sec": 1.0
+     }
+     ```
+
+     **db_path** — iMessage 数据库路径
+
+     **poll_sec** — 轮询间隔（秒），默认 1 即可
+
+5. 填写完成后，使用你的手机，给当前电脑登录的 iMessage 账号（与电脑Apple ID一致）发送任意一条消息，可以看到回复。
+
+   ![聊天](https://img.alicdn.com/imgextra/i4/O1CN01beScxi1rBBvSFeIbz_!!6000000005592-2-tps-1206-2622.png)
 
 ---
 
@@ -369,7 +396,9 @@
 
 ![1](https://img.alicdn.com/imgextra/i4/O1CN01LGYUMe1la1hmtcuyY_!!6000000004834-2-tps-4082-2126.png)
 
-5. 在**开发管理**中获取**AppID**和**AppSecret**（即 ClientSecret），填入config，方式见下方填写config.json。在\***\*IP白名单**中添加一个IP。
+5. 在**开发管理**中获取**AppID**和**AppSecret**（即 ClientSecret），填入config，方式见下方填写config.json。在**IP白名单**中添加一个IP。
+
+   > **提示：** 如果使用魔搭创空间部署CoPaw，QQ频道的IP白名单应填写：`47.92.200.108`
 
 ![1](https://img.alicdn.com/imgextra/i4/O1CN012UQWI21cnvBAUcz54_!!6000000003646-2-tps-4082-2126.png)
 
@@ -398,17 +427,297 @@
 
 ---
 
+## 企业微信
+
+### 创建新企业
+
+个人使用者可先注册账号，创建新企业，成为企业管理员。
+![创建企业](https://img.alicdn.com/imgextra/i2/O1CN01Xg8B3i1EQWAKt5xj0_!!6000000000346-2-tps-2938-1588.png)
+![新建账号](https://img.alicdn.com/imgextra/i2/O1CN01QzuScv26w6je9Yypg_!!6000000007725-2-tps-2938-1592.png)
+
+若已经有企业微信账号或是企业普通员工，可以直接在当前企业创建API模式机器人。
+
+### 创建机器人
+
+可在管理后台点击管理工具-智能机器人-创建机器人，选择API模式创建-通过长链接配置
+![创建机器人1](https://img.alicdn.com/imgextra/i2/O1CN01n4qAEI1deajLveo2B_!!6000000003761-2-tps-2938-1590.png)
+![新建机器人2](https://img.alicdn.com/imgextra/i4/O1CN01kZDNVk1ugHf73ybs2_!!6000000006066-2-tps-2938-1594.png)
+![新建机器人3](https://img.alicdn.com/imgextra/i1/O1CN01Znm7aQ1Tfpe5Ha9WL_!!6000000002410-2-tps-1482-992.png)
+
+### 绑定bot
+
+可以在Console或是`config.json`填写Bot ID和Secret绑定bot
+
+**方法一**在console填写
+![绑定机器人](https://img.alicdn.com/imgextra/i2/O1CN01X8NcEj1NrqL0e3AMS_!!6000000001624-2-tps-2732-1390.png)
+
+**方法二**在`config.json`填写(默认文件路径为`~/.copaw/config.json`)
+找到`wecom`，填写对应信息，例如：
+
+```json
+"wecom": {
+      "enabled": true,
+      "dm_policy": "open",
+      "group_policy": "open",
+      "bot_id": "your bot_id",
+      "secret": "your secret",
+      "media_dir": "~/.copaw/media",
+      "max_reconnect_attempts": -1
+    }
+```
+
+### 在企业微信开始与机器人聊天
+
+![开始使用](https://img.alicdn.com/imgextra/i3/O1CN01ZsmpYr1tq4ViIbO80_!!6000000005952-2-tps-1308-1130.png)
+
+---
+
+## Telegram
+
+### 获取 Telegram 机器人凭证
+
+1. 打开 Telegram 并搜索 `@BotFather` 添加 Bot（注意需要是官方 @BotFather，有蓝色认证标识）。
+2. 打开与 @BotFather 的聊天，根据对话中的指引创建新机器人
+
+   ![创建机器人](https://img.alicdn.com/imgextra/i1/O1CN01wVVmbY1qkcxBn8Oc0_!!6000000005534-0-tps-817-1279.jpg)
+
+3. 在对话框中创建 bot_name，复制 bot_token
+
+   ![复制token](https://img.alicdn.com/imgextra/i3/O1CN01KUMvBW1UnuF599tNX_!!6000000002563-0-tps-1209-1237.jpg)
+
+### 绑定 Bot
+
+可以在console前端配置，或者修改`~/.copaw/config.json`。
+
+**方法1**: 在console前端配置
+
+从"控制→频道"找到**Telegram**，点击后填入刚刚获取的**Bot Token**
+
+![console](https://img.alicdn.com/imgextra/i4/O1CN01utJvvg1dmNSiFOOJi_!!6000000003778-0-tps-1920-993.jpg)
+
+**方法2**: 修改`~/.copaw/config.json`
+
+在 `config.json` 里找到 `channels.telegram`，填入对应信息，例如：
+
+```json
+"telegram": {
+    "enabled": true,
+    "bot_prefix": "[BOT]",
+    "bot_token": "你的 Bot Token",
+    "http_proxy": "",
+    "http_proxy_auth": ""
+}
+```
+
+国内网络访问 Telegram API 可能需代理。如需代理：
+
+- **http_proxy** — 例如 `http://127.0.0.1:7890`
+- **http_proxy_auth** — 若代理需鉴权，填 `用户名:密码`，否则留空
+
+### 备注
+
+目前telegram白名单机制仍在施工中，推荐个人场景部署，不暴露username到公共环境中。
+
+建议在 `@BotFather` 设置：
+
+```
+/setprivacy -> ENABLED # 设置bot回复权限
+/setjoingroups -> DISABLED # 拦截Group邀请
+```
+
+---
+
+## Mattermost
+
+Mattermost 频道通过 WebSocket 实时监听事件，并使用 REST API 发送回复。支持私聊和群聊场景，在群聊中基于 **Thread（盖楼）** 划分会话上下文。
+
+### 获取凭证
+
+1. 在 Mattermost 中创建 **Bot 账号** (System Console → Integrations → Bot Accounts)。
+2. 给予机器人必要的权限（如 `Post all`），并获取 **Access Token**。
+3. 在控制台或 `config.json` 中配置 **URL** 和 **Token**。
+
+### 核心配置
+
+| 字段                              | 说明                                                      | 默认值   |
+| --------------------------------- | --------------------------------------------------------- | -------- |
+| **url**                           | Mattermost 实例的完整地址                                 | -        |
+| **bot_token**                     | 机器人的 Access Token                                     | -        |
+| **show_typing**                   | 是否开启「正在输入...」状态指示                           | `true`   |
+| **thread_follow_without_mention** | 在群聊已参与的 Thread 中，是否在后续无 @ 消息时也触发回复 | `false`  |
+| **dm_policy**                     | 私聊策略：`open` (全部允许) 或 `allowlist` (仅白名单)     | `"open"` |
+| **group_policy**                  | 群聊策略：`open` (全部允许) 或 `allowlist` (仅白名单)     | `"open"` |
+| **allow_from**                    | 允许的用户 ID 列表 (仅在策略为 `allowlist` 时生效)        | `[]`     |
+| **deny_message**                  | 被拒绝访问时的自动回复消息                                | `""`     |
+
+> **提示**：Mattermost 的 `session_id` 在私聊中固定为 `mattermost_dm:{mm_channel_id}`，在群聊中按 Thread ID 隔离回话。仅在 Session 首次触发时会自动拉取最近的历史记录作为上下文补全。
+
+---
+
+## MQTT
+
+### 介绍
+
+当前仅支持了文本和JSON格式消息。
+
+JSON消息格式
+
+```
+{
+  "text": "...",
+  "redirect_client_id": "..."
+}
+```
+
+### 基础配置
+
+| 描述                    | 属性            | 必须项 | 举例                    |
+| ----------------------- | --------------- | ------ | ----------------------- |
+| 连接地址                | host            | Y      | 127.0.0.1               |
+| 连接端口                | port            | Y      | 1883                    |
+| 协议                    | transport       | Y      | tcp                     |
+| 清除会话                | clean_session   | Y      | true                    |
+| 服务质量 / 消息投递等级 | qos             | Y      | 2                       |
+| 用户名                  | username        | N      |                         |
+| 密码                    | password        | N      |                         |
+| 订阅主题                | subscribe_topic | Y      | server/+/up             |
+| 推送主题                | publish_topic   | Y      | client/{client_id}/down |
+| 开启加密                | tls_enabled     | N      | false                   |
+| CA 根证书               | tls_ca_certs    | N      | /tsl/ca.pem             |
+| 客户端 证书文件         | tls_certfile    | N      | /tsl/client.pem         |
+| 客户端私钥文件          | tls_keyfile     | N      | /tsl/client.key         |
+
+### 主题
+
+1. 简单订阅和推送
+
+   | subscribe_topic | publish_topic |
+   | --------------- | ------------- |
+   | server          | client        |
+
+2. 模糊匹配订阅和自动推送
+
+   模糊订阅全server/+/up主题，根据客户端的client_id自动推送到对应的主题，例如客户端向`/server/client_a/up`推送，OpenClaw处理完后，将会向`/client/client_b/down`推送消息。
+
+   | subscribe_topic | publish_topic           |
+   | --------------- | ----------------------- |
+   | server/+/up     | client/{client_id}/down |
+
+3. 重定向主题推送
+
+   发送消息为JSON格式，订阅主题为`server/client_a/up`，推送主题为`client/client_a/down`
+
+   ```json
+   {
+     "text": "讲个笑话，直接回复文本即可。",
+     "redirect_client_id": "client_b"
+   }
+   ```
+
+   消息会根据redirect_client_id属性，推送至 `client/client_b/down`，从而实现跨主题推送。在物联网场景，可以做到以OpenClaw为核心，根据个人需求，多设备间自主推送消息。
+
+---
+
+## Matrix
+
+Matrix 频道通过 [matrix-nio](https://github.com/poljar/matrix-nio) 库将 CoPaw 接入任意 Matrix 服务器，支持私聊和群聊房间中的文本消息收发。
+
+### 创建机器人账号并获取 Access Token
+
+1. 在任意 Matrix 服务器上注册机器人账号（例如 [matrix.org](https://matrix.org)，可在 [app.element.io](https://app.element.io/#/register) 注册）。
+
+2. 获取机器人的 **Access Token**，最简便的方式是通过 Element：
+
+   - 以机器人账号登录 [app.element.io](https://app.element.io)
+   - 前往 **设置 → 帮助与关于 → 高级 → Access Token**
+   - 复制 Token（以 `syt_...` 开头）
+
+   也可以直接调用 Matrix Client-Server API：
+
+   ```bash
+   curl -X POST "https://matrix.org/_matrix/client/v3/login" \
+     -H "Content-Type: application/json" \
+     -d '{"type":"m.login.password","user":"@yourbot:matrix.org","password":"yourpassword"}'
+   ```
+
+   响应中的 `access_token` 即为所需 Token。
+
+3. 记录机器人的 **User ID**（格式：`@用户名:服务器`，例如 `@mybot:matrix.org`）和 **Homeserver URL**（例如 `https://matrix.org`）。
+
+### 配置频道
+
+**方式一：** 在 Console 中配置
+
+前往 **控制 → 频道**，点击 **Matrix**，启用后填写：
+
+- **Homeserver URL** — 例如 `https://matrix.org`
+- **User ID** — 例如 `@mybot:matrix.org`
+- **Access Token** — 上面复制的 Token（以密码框形式显示）
+
+**方式二：** 编辑 `~/.copaw/config.json`
+
+在 `config.json` 中找到 `channels.matrix`：
+
+```json
+"matrix": {
+  "enabled": true,
+  "bot_prefix": "[BOT]",
+  "homeserver": "https://matrix.org",
+  "user_id": "@mybot:matrix.org",
+  "access_token": "syt_..."
+}
+```
+
+保存后，若 CoPaw 已在运行，频道会自动重载。
+
+### 开始聊天
+
+从任意 Matrix 客户端（如 Element）邀请机器人进入房间或发起私聊。机器人会监听其已加入的所有房间中的消息。
+
+### 注意事项
+
+- Matrix 频道当前**仅支持文本消息**（不支持图片/文件附件）。
+- 机器人只能接收已加入房间的消息，发消息前请先邀请机器人进入对应房间。
+- 如使用自建服务器，将 `homeserver` 设置为你的服务器地址（例如 `https://matrix.example.com`）。
+
+---
+
+## 小艺（XiaoYi）
+
+小艺通道通过 **A2A (Agent-to-Agent) 协议** 基于 WebSocket 连接华为小艺平台。
+
+### 获取凭证
+
+1. 在小艺开放平台创建Agent。
+2. 获取 **AK** (Access Key)、**SK** (Secret Key) 和 **Agent ID**。
+
+### 核心配置
+
+| 字段         | 说明           | 默认值                                           |
+| ------------ | -------------- | ------------------------------------------------ |
+| **ak**       | 访问密钥       | -                                                |
+| **sk**       | 密钥           | -                                                |
+| **agent_id** | 代理唯一标识   | -                                                |
+| **ws_url**   | WebSocket 地址 | `wss://hag.cloud.huawei.com/openclaw/v1/ws/link` |
+
+---
+
 ## 附录
 
 ### 配置总览
 
-| 频道     | 配置键   | 必填/主要字段                                                       |
-| -------- | -------- | ------------------------------------------------------------------- |
-| 钉钉     | dingtalk | client_id, client_secret                                            |
-| 飞书     | feishu   | app_id, app_secret；可选 encrypt_key, verification_token, media_dir |
-| iMessage | imessage | db_path, poll_sec（仅 macOS）                                       |
-| Discord  | discord  | bot_token；可选 http_proxy, http_proxy_auth                         |
-| QQ       | qq       | app_id, client_secret                                               |
+| 频道       | 配置键     | 必填/主要字段                                                       |
+| ---------- | ---------- | ------------------------------------------------------------------- |
+| 钉钉       | dingtalk   | client_id, client_secret                                            |
+| 飞书       | feishu     | app_id, app_secret；可选 encrypt_key, verification_token, media_dir |
+| iMessage   | imessage   | db_path, poll_sec（仅 macOS）                                       |
+| Discord    | discord    | bot_token；可选 http_proxy, http_proxy_auth                         |
+| QQ         | qq         | app_id, client_secret                                               |
+| 企业微信   | wecom      | bot_id, secret；可选 media_dir, max_reconnect_attempts              |
+| Telegram   | telegram   | bot_token；可选 http_proxy, http_proxy_auth                         |
+| Mattermost | mattermost | url, bot_token; 可选 show_typing, dm_policy, allow_from             |
+| Matrix     | matrix     | homeserver, user_id, access_token                                   |
+| 小艺       | xiaoyi     | ak, sk, agent_id；可选 ws_url                                       |
 
 各频道字段与完整结构见上文表格及 [配置与工作目录](./config)。
 
@@ -417,13 +726,18 @@
 不同频道对「文本 / 图片 / 视频 / 音频 / 文件」的**接收**（用户发给机器人）与**发送**（机器人回复用户）支持程度如下。
 「✓」= 已支持；「🚧」= 施工中（可实现但尚未实现）；「✗」= 不支持（该频道本身无法支持）。
 
-| 频道     | 接收文本 | 接收图片 | 接收视频 | 接收音频 | 接收文件 | 发送文本 | 发送图片 | 发送视频 | 发送音频 | 发送文件 |
-| -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
-| 钉钉     | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        |
-| 飞书     | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        |
-| Discord  | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | 🚧       | 🚧       | 🚧       | 🚧       |
-| iMessage | ✓        | ✗        | ✗        | ✗        | ✗        | ✓        | ✗        | ✗        | ✗        | ✗        |
-| QQ       | ✓        | 🚧       | 🚧       | 🚧       | 🚧       | ✓        | 🚧       | 🚧       | 🚧       | 🚧       |
+| 频道       | 接收文本 | 接收图片 | 接收视频 | 接收音频 | 接收文件 | 发送文本 | 发送图片 | 发送视频 | 发送音频 | 发送文件 |
+| ---------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
+| 钉钉       | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        |
+| 飞书       | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        |
+| Discord    | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | 🚧       | 🚧       | 🚧       | 🚧       |
+| iMessage   | ✓        | ✗        | ✗        | ✗        | ✗        | ✓        | ✗        | ✗        | ✗        | ✗        |
+| QQ         | ✓        | 🚧       | 🚧       | 🚧       | 🚧       | ✓        | 🚧       | 🚧       | 🚧       | 🚧       |
+| 企业微信   | ✓        | ✓        | 🚧       | ✓        | ✓        | ✓        | 🚧       | 🚧       | 🚧       | 🚧       |
+| Telegram   | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        |
+| Mattermost | ✓        | ✓        | 🚧       | 🚧       | ✓        | ✓        | ✓        | 🚧       | 🚧       | ✓        |
+| Matrix     | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        | ✓        |
+| 小艺       | ✓        | 🚧       | 🚧       | 🚧       | 🚧       | ✓        | 🚧       | 🚧       | 🚧       | 🚧       |
 
 说明：
 
@@ -432,6 +746,10 @@
 - **Discord**：接收时附件会解析为图片 / 视频 / 音频 / 文件并传入 Agent；回复时真实附件发送为 🚧 施工中，当前仅以链接形式附在文本中。
 - **iMessage**：基于本地 imsg + 数据库轮询，仅支持文本收发；平台/实现限制，无法支持附件（✗）。
 - **QQ**：接收侧附件解析为多模态、发送侧真实媒体均为 🚧 施工中，当前仅文本 + 链接形式。
+- **Telegram**：接收时附件会解析为文件并传入，可在telegram对话界面以对应格式打开（图片 / 语音 / 视频 / 文件）
+- **企业微信**：WebSocket 长连接接收，markdown/template_card 发送；支持接收文本、图片、语音和文件；发送媒体暂不支持（SDK 限制，仅支持通过 markdown 发送文本）。
+- **Matrix**：接收图片 / 视频 / 音频 / 文件（通过 `mxc://` 媒体 URL）；发送时将文件上传至服务器后以原生 Matrix 媒体消息（`m.image`、`m.video`、`m.audio`、`m.file`）发出。
+- **小艺**：当前仅支持文本。
 
 ### 通过 HTTP 修改配置
 

@@ -24,7 +24,7 @@ from ..config.config import (
     HeartbeatConfig,
 )
 from ..constant import HEARTBEAT_DEFAULT_EVERY
-from ..providers import load_providers_json
+from ..providers import ProviderManager
 
 SECURITY_WARNING = """
 Security warning — please read.
@@ -53,6 +53,21 @@ Recommended baseline:
 Review your config and skills regularly; limit tool scope to what you need.
 """
 
+TELEMETRY_INFO = """
+Help improve CoPaw by sharing anonymous usage data!
+
+We collect only:
+• CoPaw version (e.g., 0.0.7)
+• Install method (pip, Docker, or desktop app)
+• OS and version (e.g., macOS 14.0, Ubuntu 22.04)
+• Python version (e.g., 3.11)
+• CPU architecture (e.g., x86_64, arm64)
+• GPU availability (detected, not detailed specs)
+
+No personal data collected! No files, no credentials, no identifiable information.
+This helps us understand CoPaw's usage environment and prioritize improvements.
+"""
+
 
 def _echo_security_warning_box() -> None:
     """Print SECURITY_WARNING in a rich panel with blue border."""
@@ -61,6 +76,18 @@ def _echo_security_warning_box() -> None:
         Panel(
             SECURITY_WARNING.strip(),
             title="[bold]🐾 Security warning — please read[/bold]",
+            border_style="blue",
+        ),
+    )
+
+
+def _echo_telemetry_info_box() -> None:
+    """Print TELEMETRY_INFO in a rich panel with blue border."""
+    console = Console()
+    console.print(
+        Panel(
+            TELEMETRY_INFO.strip(),
+            title="[bold]📊 Help improve CoPaw[/bold]",
             border_style="blue",
         ),
     )
@@ -78,6 +105,12 @@ DEFAULT_HEARTBEAT_MDS = {
 - Check calendar for next 2h
 - Check tasks for blockers
 - Light check-in if quiet for 8h
+""",
+    "ru": """# Heartbeat checklist
+- Проверить входящие на срочные письма
+- Просмотреть календарь на ближайшие 2 часа
+- Проверить задачи на наличие блокировок
+- Лёгкая проверка при отсутствии активности более 8 часов
 """,
 }
 
@@ -101,7 +134,11 @@ DEFAULT_HEARTBEAT_MDS = {
     help="Skip security confirmation (use with --defaults for scripts/Docker).",
 )
 # pylint: disable=too-many-branches,too-many-statements
-def init_cmd(force: bool, use_defaults: bool, accept_security: bool) -> None:
+def init_cmd(
+    force: bool,
+    use_defaults: bool,
+    accept_security: bool,
+) -> None:
     """Create working dir with config.json and HEARTBEAT.md (interactive)."""
     config_path = get_config_path()
     working_dir = config_path.parent
@@ -126,6 +163,26 @@ def init_cmd(force: bool, use_defaults: bool, accept_security: bool) -> None:
             )
             raise click.Abort()
     working_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- Telemetry collection (optional, anonymous) ---
+    from ..utils.telemetry import (
+        collect_and_upload_telemetry,
+        has_telemetry_been_collected,
+        mark_telemetry_collected,
+    )
+
+    if not has_telemetry_been_collected(working_dir):
+        if use_defaults:
+            success = collect_and_upload_telemetry(working_dir)
+
+        else:
+            _echo_telemetry_info_box()
+            if prompt_confirm("Share usage data?", default=True):
+                success = collect_and_upload_telemetry(working_dir)
+                if success:
+                    click.echo("✓ Thank you!")
+            else:
+                mark_telemetry_collected(working_dir)
 
     # --- config.json ---
     write_config = True
@@ -200,7 +257,7 @@ def init_cmd(force: bool, use_defaults: bool, accept_security: bool) -> None:
         if not use_defaults:
             language = prompt_choice(
                 "Select language for MD files:",
-                options=["zh", "en"],
+                options=["zh", "en", "ru"],
                 default=existing.agents.language,
             )
             existing.agents.language = language
@@ -217,13 +274,17 @@ def init_cmd(force: bool, use_defaults: bool, accept_security: bool) -> None:
         click.echo(f"\n✓ Configuration saved to {config_path}")
 
     # --- LLM provider and model configuration ---
-    data = load_providers_json()
-    has_llm = bool(data.active_llm.provider_id and data.active_llm.model)
+    provider_manager = ProviderManager.get_instance()
+    activate_llm = provider_manager.get_active_model()
 
-    if has_llm:
+    if (
+        activate_llm is not None
+        and activate_llm.provider_id
+        and activate_llm.model
+    ):
         click.echo(
             f"\n✓ LLM already configured: "
-            f"{data.active_llm.provider_id} / {data.active_llm.model}",
+            f"{activate_llm.provider_id} / {activate_llm.model}",
         )
         if not use_defaults and prompt_confirm(
             "Reconfigure LLM provider?",

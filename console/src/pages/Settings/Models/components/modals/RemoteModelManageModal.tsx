@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Button,
   Form,
@@ -7,7 +7,12 @@ import {
   Tag,
   message,
 } from "@agentscope-ai/design";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  ApiOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
 import type { ProviderInfo } from "../../../../../api/types";
 import api from "../../../../../api";
 import { useTranslation } from "react-i18next";
@@ -17,7 +22,7 @@ interface RemoteModelManageModalProps {
   provider: ProviderInfo;
   open: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
 }
 
 export function RemoteModelManageModal({
@@ -29,27 +34,65 @@ export function RemoteModelManageModal({
   const { t } = useTranslation();
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
+  const [testingModelId, setTestingModelId] = useState<string | null>(null);
   const [form] = Form.useForm();
+  const canDiscover = provider.support_model_discovery;
 
   // For custom providers ALL models are deletable.
   // For built-in providers only extra_models are deletable.
-  const extraModelIds = new Set(
-    provider.is_custom
-      ? provider.models.map((m) => m.id)
-      : (provider.extra_models || []).map((m) => m.id),
-  );
+  const extraModelIds = new Set((provider.extra_models || []).map((m) => m.id));
+
+  const doAddModel = async (id: string, name: string) => {
+    await api.addModel(provider.id, { id, name });
+    message.success(t("models.modelAdded", { name }));
+    form.resetFields();
+    setAdding(false);
+    onSaved();
+  };
 
   const handleAddModel = async () => {
     try {
       const values = await form.validateFields();
-      setSaving(true);
       const id = values.id.trim();
       const name = values.name?.trim() || id;
-      await api.addModel(provider.id, { id, name });
-      message.success(t("models.modelAdded", { name }));
-      form.resetFields();
-      setAdding(false);
-      onSaved();
+
+      // Step 1: Test the model connection first
+      setSaving(true);
+      const testResult = await api.testModelConnection(provider.id, {
+        model_id: id,
+      });
+
+      if (!testResult.success) {
+        // Test failed – ask user whether to proceed anyway
+        setSaving(false);
+        Modal.confirm({
+          title: t("models.testConnectionFailed"),
+          content: t("models.modelTestFailedConfirm", {
+            message: testResult.message || t("models.modelTestFailed"),
+          }),
+          okText: t("models.addModel"),
+          cancelText: t("models.cancel"),
+          onOk: async () => {
+            setSaving(true);
+            try {
+              await doAddModel(id, name);
+            } catch (error) {
+              const errMsg =
+                error instanceof Error
+                  ? error.message
+                  : t("models.modelAddFailed");
+              message.error(errMsg);
+            } finally {
+              setSaving(false);
+            }
+          },
+        });
+        return;
+      }
+
+      // Step 2: If test passed, add the model
+      await doAddModel(id, name);
     } catch (error) {
       if (error && typeof error === "object" && "errorFields" in error) return;
       const errMsg =
@@ -57,6 +100,28 @@ export function RemoteModelManageModal({
       message.error(errMsg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestModel = async (modelId: string) => {
+    setTestingModelId(modelId);
+    try {
+      const result = await api.testModelConnection(provider.id, {
+        model_id: modelId,
+      });
+      if (result.success) {
+        message.success(result.message || t("models.testConnectionSuccess"));
+      } else {
+        message.warning(result.message || t("models.testConnectionFailed"));
+      }
+    } catch (error) {
+      const errMsg =
+        error instanceof Error
+          ? error.message
+          : t("models.testConnectionError");
+      message.error(errMsg);
+    } finally {
+      setTestingModelId(null);
     }
   };
 
@@ -74,7 +139,7 @@ export function RemoteModelManageModal({
         try {
           await api.removeModel(provider.id, modelId);
           message.success(t("models.modelRemoved", { name: modelName }));
-          onSaved();
+          await onSaved();
         } catch (error) {
           const errMsg =
             error instanceof Error
@@ -92,21 +157,73 @@ export function RemoteModelManageModal({
     onClose();
   };
 
+  const handleDiscoverModels = async () => {
+    setDiscovering(true);
+    try {
+      const result = await api.discoverModels(provider.id);
+      if (!result.success) {
+        message.warning(result.message || t("models.discoverModelsFailed"));
+        return;
+      }
+
+      if (result.added_count > 0) {
+        message.success(
+          t("models.autoDiscoveredAndAdded", {
+            count: result.models.length,
+            added: result.added_count,
+          }),
+        );
+        await onSaved();
+      } else if (result.models.length > 0) {
+        message.info(
+          t("models.autoDiscoveredNoNew", { count: result.models.length }),
+        );
+        await onSaved();
+      } else {
+        message.info(result.message || t("models.noModels"));
+      }
+    } catch (error) {
+      const errMsg =
+        error instanceof Error
+          ? error.message
+          : t("models.discoverModelsFailed");
+      message.error(errMsg);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  useEffect(() => {
+    // Do not auto-discover models when modal opens, as it may take some time and we don't want to block the UI.
+    // Instead, users can click the "Discover Models" button to trigger discovery when needed.
+  }, [open, canDiscover, provider.id, provider.models.length]);
+
+  const all_models = [
+    ...(provider.models ?? []),
+    ...(provider.extra_models ?? []),
+  ];
+
   return (
     <Modal
       title={t("models.manageModelsTitle", { provider: provider.name })}
       open={open}
       onCancel={handleClose}
-      footer={null}
+      footer={
+        <div className={styles.modalFooter}>
+          <div className={styles.modalFooterRight}>
+            <Button onClick={handleClose}>{t("models.cancel")}</Button>
+          </div>
+        </div>
+      }
       width={560}
       destroyOnHidden
     >
       {/* Model list */}
       <div className={styles.modelList}>
-        {provider.models.length === 0 ? (
+        {all_models.length === 0 ? (
           <div className={styles.modelListEmpty}>{t("models.noModels")}</div>
         ) : (
-          provider.models.map((m) => {
+          all_models.map((m) => {
             const isDeletable = extraModelIds.has(m.id);
             return (
               <div key={m.id} className={styles.modelListItem}>
@@ -126,15 +243,39 @@ export function RemoteModelManageModal({
                       <Button
                         type="text"
                         size="small"
+                        icon={<ApiOutlined />}
+                        onClick={() => handleTestModel(m.id)}
+                        loading={testingModelId === m.id}
+                        style={{ marginRight: 4 }}
+                      >
+                        {t("models.testConnection")}
+                      </Button>
+                      <Button
+                        type="text"
+                        size="small"
                         danger
                         icon={<DeleteOutlined />}
                         onClick={() => handleRemoveModel(m.id, m.name)}
                       />
                     </>
                   ) : (
-                    <Tag color="green" style={{ fontSize: 11 }}>
-                      {t("models.builtin")}
-                    </Tag>
+                    <>
+                      <Tag
+                        color="green"
+                        style={{ fontSize: 11, marginRight: 4 }}
+                      >
+                        {t("models.builtin")}
+                      </Tag>
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<ApiOutlined />}
+                        onClick={() => handleTestModel(m.id)}
+                        loading={testingModelId === m.id}
+                      >
+                        {t("models.testConnection")}
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -186,15 +327,25 @@ export function RemoteModelManageModal({
           </Form>
         </div>
       ) : (
-        <Button
-          type="dashed"
-          block
-          icon={<PlusOutlined />}
-          onClick={() => setAdding(true)}
-          style={{ marginTop: 12 }}
-        >
-          {t("models.addModel")}
-        </Button>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <Button
+            icon={<SyncOutlined />}
+            onClick={handleDiscoverModels}
+            loading={discovering}
+            disabled={!canDiscover}
+            style={{ flex: 1 }}
+          >
+            {t("models.discoverModels")}
+          </Button>
+          <Button
+            type="dashed"
+            icon={<PlusOutlined />}
+            onClick={() => setAdding(true)}
+            style={{ flex: 1 }}
+          >
+            {t("models.addModel")}
+          </Button>
+        </div>
       )}
     </Modal>
   );

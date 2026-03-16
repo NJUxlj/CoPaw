@@ -6,6 +6,10 @@ import type {
   ModelSlotRequest,
   CreateCustomProviderRequest,
   AddModelRequest,
+  TestConnectionResponse,
+  TestProviderRequest,
+  TestModelRequest,
+  DiscoverModelsResponse,
 } from "../types";
 
 export const providerApi = {
@@ -53,5 +57,34 @@ export const providerApi = {
         modelId,
       )}`,
       { method: "DELETE" },
+    ),
+
+  /* ---- Test Connection ---- */
+
+  testProviderConnection: (providerId: string, body?: TestProviderRequest) =>
+    request<TestConnectionResponse>(
+      `/models/${encodeURIComponent(providerId)}/test`,
+      {
+        method: "POST",
+        body: body ? JSON.stringify(body) : undefined,
+      },
+    ),
+
+  testModelConnection: (providerId: string, body: TestModelRequest) =>
+    request<TestConnectionResponse>(
+      `/models/${encodeURIComponent(providerId)}/models/test`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
+
+  discoverModels: (providerId: string, body?: TestProviderRequest) =>
+    request<DiscoverModelsResponse>(
+      `/models/${encodeURIComponent(providerId)}/discover`,
+      {
+        method: "POST",
+        body: body ? JSON.stringify(body) : undefined,
+      },
     ),
 };
