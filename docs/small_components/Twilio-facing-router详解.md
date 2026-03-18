@@ -1,0 +1,341 @@
+# Twilio-facing Router 详解
+
+## 概述
+
+Twilio-facing Router 是一个 **FastAPI 路由器**，专门用于处理来自 **Twilio**（云通信平台）的 HTTP 请求和 WebSocket 连接。Twilio 是全球领先的云通信服务提供商，提供语音通话、短信等功能。
+
+该路由器位于 `/src/copaw/app/routers/voice.py`，导出了 `voice_router`，包含三个核心端点：
+- `/voice/incoming` - 处理来电
+- `/voice/ws` - WebSocket 实时通信
+- `/voice/status-callback` - 通话状态回调
+
+---
+
+## 文件结构
+
+| 组件 | 作用 |
+|------|------|
+| `voice_router` | FastAPI 路由器实例 |
+| `_get_voice_channel()` | 获取语音通道配置的辅助函数 |
+| `_validate_twilio_signature()` | 验证 Twilio 请求签名的安全函数 |
+| `voice_incoming()` | 处理来电的 Webhook |
+| `voice_ws()` | WebSocket 实时通信端点 |
+| `voice_status_callback()` | 通话状态变更回调 |
+
+---
+
+## 核心组件详解
+
+### 1. `_get_voice_channel()` - 获取语音通道
+
+```python
+def _get_voice_channel(request_or_ws):
+    """Retrieve the VoiceChannel from app state, or None."""
+    app = getattr(request_or_ws, "app", None)
+    if not app:
+        return None
+    cm = getattr(app.state, "channel_manager", None)
+    if not cm:
+        return None
+    for ch in cm.channels:
+        if ch.channel == "voice":
+            return ch
+    return None
+```
+
+从应用状态中检索语音通道配置，如果没有配置则返回 None。
+
+---
+
+### 2. `_validate_twilio_signature()` - 签名验证
+
+```python
+async def _validate_twilio_signature(request: Request) -> None:
+    """Validate that the request originated from Twilio.
+
+    Uses Twilio's ``RequestValidator`` to verify the
+    ``X-Twilio-Signature`` header.  If the voice channel has no
+    auth token configured the check is skipped (dev mode).
+    """
+```
+
+这是一个异步函数，用于验证 HTTP 请求是否真正来自 Twilio 服务，防止恶意请求伪造。
+
+#### 验证流程：
+
+1. **获取语音通道配置**
+   ```python
+   voice_ch = _get_voice_channel(request)
+   if not voice_ch:
+       return
+   ```
+
+2. **获取 Auth Token**
+   ```python
+   auth_token = getattr(voice_ch.config, "twilio_auth_token", "")
+   if not auth_token:
+       # No token configured -- skip validation (local dev)
+       return
+   ```
+   - 如果没有配置 Token，跳过验证（用于本地开发环境）
+
+3. **检查签名头**
+   ```python
+   signature = request.headers.get("X-Twilio-Signature", "")
+   if not signature:
+       raise HTTPException(status_code=403, detail="Missing Twilio signature")
+   ```
+
+4. **重建原始 URL**
+   ```python
+   proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+   host = request.headers.get("x-forwarded-host", request.url.netloc)
+   url = f"{proto}://{host}{request.url.path}"
+   ```
+   这段代码很重要！因为应用可能部署在反向代理（如 Nginx）或隧道后面，需要使用 `X-Forwarded-*` 头来重建 Twilio 实际请求的公网 URL。
+
+5. **验证签名**
+   ```python
+   from twilio.request_validator import RequestValidator
+
+   validator = RequestValidator(auth_token)
+   form = await request.form()
+   params = {k: str(v) for k, v in form.items()}
+
+   if not validator.validate(url, params, signature):
+       raise HTTPException(status_code=403, detail="Invalid Twilio signature")
+   ```
+
+#### 安全机制
+
+Twilio 的签名验证机制：
+1. Twilio 发送请求时，使用你的 **Auth Token** + **请求 URL** + **请求参数** 计算 HMAC-SHA1 签名
+2. 将签名放在 `X-Twilio-Signature` 头中
+3. 你的服务器用同样的方式计算签名，对比是否一致
+
+这样可以确保：
+- 请求确实来自 Twilio
+- 请求内容未被篡改
+
+---
+
+## 三个核心端点
+
+### 1. `/voice/incoming` - 来电处理
+
+```python
+@voice_router.post(
+    "/voice/incoming",
+    dependencies=[Depends(_validate_twilio_signature)],
+)
+async def voice_incoming(request: Request) -> Response:
+    """Twilio webhook: return TwiML for an incoming call."""
+```
+
+**作用**：当有人拨打你的 Twilio 电话号码时，Twilio 会发送请求到这个端点。
+
+#### 处理流程：
+
+1. **验证 Twilio 签名**（通过依赖注入）
+2. **获取语音通道配置**
+   ```python
+   voice_ch = _get_voice_channel(request)
+   if not voice_ch:
+       twiml = build_error_twiml("Voice channel is not available.")
+       return Response(content=twiml, media_type="application/xml")
+   ```
+
+3. **生成 WebSocket URL**
+   ```python
+   wss_url = voice_ch.get_tunnel_wss_url()
+   if not wss_url:
+       twiml = build_error_twiml("Tunnel not available. Please try later.")
+       return Response(content=twiml, media_type="application/xml")
+   ```
+
+4. **创建单次使用 Token**
+   ```python
+   token = voice_ch.create_ws_token()
+   ws_url = f"{wss_url}/voice/ws?token={token}"
+   ```
+
+5. **构建 TwiML 响应**
+   ```python
+   twiml = build_conversation_relay_twiml(
+       ws_url,
+       welcome_greeting=getattr(config, "welcome_greeting", "Hi! This is CoPaw. How can I help you?"),
+       tts_provider=getattr(config, "tts_provider", "google"),
+       tts_voice=getattr(config, "tts_voice", "en-US-Journey-D"),
+       stt_provider=getattr(config, "stt_provider", "deepgram"),
+       language=getattr(config, "language", "en-US"),
+   )
+   ```
+
+6. **返回 XML 响应**
+   ```python
+   return Response(content=twiml, media_type="application/xml")
+   ```
+
+#### TwiML 示例
+
+```xml
+<Response>
+  <Connect>
+    <ConversationRelay url="wss://your-server/voice/ws?token=xxx" />
+  </Connect>
+</Response>
+```
+
+这告诉 Twilio："接通这个电话，并通过 WebSocket 连接到我的服务器进行实时语音处理"。
+
+---
+
+### 2. `/voice/ws` - WebSocket 实时通信
+
+```python
+@voice_router.websocket("/voice/ws")
+async def voice_ws(websocket: WebSocket) -> None:
+    """ConversationRelay WebSocket endpoint.
+
+    Each connection must present a single-use token (query param) that
+    was generated by ``/voice/incoming`` and embedded in the TwiML.
+    """
+```
+
+**作用**：与 Twilio 建立实时双向通信，处理语音流。
+
+#### 关键特性：
+
+- 使用 **单次有效 Token** 进行身份验证
+- 基于 **ConversationRelay** 协议
+- 实时传输：语音输入 → STT（语音转文字）→ AI 处理 → TTS（文字转语音）→ 语音输出
+
+#### 处理流程：
+
+1. **获取语音通道**
+   ```python
+   voice_ch = _get_voice_channel(websocket)
+   if not voice_ch:
+       await websocket.close(code=1008, reason="Voice channel not available")
+       return
+   ```
+
+2. **验证单次使用 Token**
+   ```python
+   token = websocket.query_params.get("token", "")
+   if not token or not voice_ch.validate_ws_token(token):
+       logger.warning("WS connection rejected: invalid or missing token")
+       await websocket.close(code=1008, reason="Invalid token")
+       return
+   ```
+
+3. **接受连接**
+   ```python
+   await websocket.accept()
+   ```
+
+4. **创建处理器并处理通信**
+   ```python
+   handler = ConversationRelayHandler(
+       ws=websocket,
+       process=voice_ch.process,          # AI 处理函数
+       session_mgr=voice_ch.session_mgr,  # 会话管理
+       channel_type=voice_ch.channel,
+   )
+   try:
+       await handler.handle()
+   except WebSocketDisconnect:
+       logger.info("Voice WS disconnected: call_sid=%s", handler.call_sid)
+   finally:
+       if handler.call_sid:
+           voice_ch.session_mgr.end_session(handler.call_sid)
+   ```
+
+---
+
+### 3. `/voice/status-callback` - 状态回调
+
+```python
+@voice_router.post(
+    "/voice/status-callback",
+    dependencies=[Depends(_validate_twilio_signature)],
+)
+async def voice_status_callback(request: Request) -> Response:
+    """Twilio call status change webhook."""
+```
+
+**作用**：Twilio 在通话状态变化时主动通知你的服务器。
+
+#### 监控的状态：
+
+| 状态 | 含义 |
+|------|------|
+| `completed` | 通话结束 |
+| `busy` | 占线 |
+| `no-answer` | 无人接听 |
+| `canceled` | 被取消 |
+| `failed` | 失败 |
+
+#### 处理流程：
+
+```python
+form = await request.form()
+call_sid = form.get("CallSid", "")
+call_status = form.get("CallStatus", "")
+logger.info(
+    "Call status callback: call_sid=%s status=%s",
+    call_sid,
+    call_status,
+)
+
+if call_status in ("completed", "busy", "no-answer", "canceled", "failed"):
+    voice_ch = _get_voice_channel(request)
+    if voice_ch:
+        voice_ch.session_mgr.end_session(str(call_sid))
+
+return Response(content="", status_code=204)
+```
+
+当这些状态发生时，服务器会清理对应的会话资源。
+
+---
+
+## 架构流程图
+
+```
+用户拨打电话
+    ↓
+Twilio 平台
+    ↓
+POST /voice/incoming ← 返回 TwiML（包含 WebSocket URL）
+    ↓
+Twilio 连接到 WebSocket /voice/ws
+    ↓
+实时双向语音流：
+  用户语音 → STT → AI 处理 → TTS → 播放给用户
+    ↓
+通话结束
+    ↓
+POST /voice/status-callback ← 清理会话
+```
+
+---
+
+## 安全机制总结
+
+1. **签名验证**：每个 Twilio 请求都带有签名，防止伪造
+2. **Token 验证**：WebSocket 连接需要有效的单次使用 Token
+3. **开发模式**：没有配置 Auth Token 时跳过验证（本地开发便利）
+
+---
+
+## 总结
+
+Twilio-facing Router 是 CoPaw 应用的**语音通道入口**，它：
+
+- 接收 Twilio 的来电通知
+- 建立实时 WebSocket 语音通道
+- 集成 AI 对话能力（通过 `ConversationRelayHandler`）
+- 管理通话生命周期和会话状态
+
+它是传统电话网络与现代 AI 对话系统之间的桥梁！
