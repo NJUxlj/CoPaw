@@ -29,6 +29,7 @@ from agentscope_runtime.engine.schemas.agent_schemas import (
 )
 from aibot import WSClient, WSClientOptions, generate_req_id
 
+from ....constant import DEFAULT_MEDIA_DIR
 from ..base import (
     BaseChannel,
     ContentType,
@@ -37,6 +38,7 @@ from ..base import (
     ProcessHandler,
 )
 from .utils import format_markdown_tables
+from ..utils import split_text
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +63,7 @@ class WecomChannel(BaseChannel):
         bot_id: str,
         secret: str,
         bot_prefix: str = "[BOT] ",
-        media_dir: str = "~/.copaw/media",
+        media_dir: str = "",
         welcome_text: str = "",
         on_reply_sent: OnReplySent = None,
         show_tool_details: bool = True,
@@ -89,11 +91,14 @@ class WecomChannel(BaseChannel):
         self.secret = secret
         self.bot_prefix = bot_prefix
         self.welcome_text = welcome_text
-        self._media_dir = Path(media_dir).expanduser()
+        self._media_dir = (
+            Path(media_dir).expanduser() if media_dir else DEFAULT_MEDIA_DIR
+        )
         self._max_reconnect_attempts = max_reconnect_attempts
 
         self._client: Any = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._ws_loop: Optional[asyncio.AbstractEventLoop] = None
         self._ws_thread: Optional[threading.Thread] = None
 
         # message_id dedup (ordered dict, trimmed when over limit)
@@ -118,7 +123,7 @@ class WecomChannel(BaseChannel):
             bot_id=os.getenv("WECOM_BOT_ID", ""),
             secret=os.getenv("WECOM_SECRET", ""),
             bot_prefix=os.getenv("WECOM_BOT_PREFIX", "[BOT] "),
-            media_dir=os.getenv("WECOM_MEDIA_DIR", "~/.copaw/media"),
+            media_dir=os.getenv("WECOM_MEDIA_DIR", ""),
             on_reply_sent=on_reply_sent,
             dm_policy=os.getenv("WECOM_DM_POLICY", "open"),
             group_policy=os.getenv("WECOM_GROUP_POLICY", "open"),
@@ -145,10 +150,7 @@ class WecomChannel(BaseChannel):
             bot_id=getattr(config, "bot_id", "") or "",
             secret=getattr(config, "secret", "") or "",
             bot_prefix=getattr(config, "bot_prefix", "[BOT] ") or "[BOT] ",
-            media_dir=(
-                getattr(config, "media_dir", "~/.copaw/media")
-                or "~/.copaw/media"
-            ),
+            media_dir=getattr(config, "media_dir", None) or "",
             welcome_text=getattr(config, "welcome_text", "") or "",
             on_reply_sent=on_reply_sent,
             show_tool_details=show_tool_details,
@@ -637,20 +639,25 @@ class WecomChannel(BaseChannel):
         # Only first reply uses it; subsequent replies get new stream_id
         processing_sid = m.pop("wecom_processing_stream_id", "")
 
-        if body and frame:
-            await self._send_text_via_frame(frame, body, processing_sid)
-        elif body and chatid:
-            # Proactive send without an inbound frame
-            try:
-                await self._client.send_message(
-                    chatid,
-                    {
-                        "msgtype": "markdown",
-                        "markdown": {"content": body},
-                    },
-                )
-            except Exception:
-                logger.exception("wecom send_content_parts proactive failed")
+        first_chunk = True
+        for chunk in split_text(body) if body else []:
+            sid = processing_sid if first_chunk else ""
+            first_chunk = False
+            if frame:
+                await self._send_text_via_frame(frame, chunk, sid)
+            elif chatid:
+                try:
+                    await self._client.send_message(
+                        chatid,
+                        {
+                            "msgtype": "markdown",
+                            "markdown": {"content": chunk},
+                        },
+                    )
+                except Exception:
+                    logger.exception(
+                        "wecom send_content_parts proactive failed",
+                    )
 
         # # the SDK does not support sending media files.
         # for part in media_parts:
@@ -705,27 +712,29 @@ class WecomChannel(BaseChannel):
         if not body:
             return
 
-        if frame:
-            await self._send_text_via_frame(frame, body)
-        elif chatid and self._client:
-            try:
-                await self._client.send_message(
-                    chatid,
-                    {
-                        "msgtype": "markdown",
-                        "markdown": {"content": body},
-                    },
+        for chunk in split_text(body):
+            if frame:
+                await self._send_text_via_frame(frame, chunk)
+            elif chatid and self._client:
+                try:
+                    await self._client.send_message(
+                        chatid,
+                        {
+                            "msgtype": "markdown",
+                            "markdown": {"content": chunk},
+                        },
+                    )
+                except Exception:
+                    logger.exception(
+                        "wecom send proactive failed chatid=%s",
+                        chatid,
+                    )
+            else:
+                logger.warning(
+                    "wecom send: no frame/chatid for to_handle=%s",
+                    (to_handle or "")[:40],
                 )
-            except Exception:
-                logger.exception(
-                    "wecom send proactive failed chatid=%s",
-                    chatid,
-                )
-        else:
-            logger.warning(
-                "wecom send: no frame/chatid for to_handle=%s",
-                (to_handle or "")[:40],
-            )
+                break
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -739,6 +748,7 @@ class WecomChannel(BaseChannel):
         else:
             ws_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(ws_loop)
+        self._ws_loop = ws_loop
 
         # Set thread name for debugging
         threading.current_thread().name = "wecom-ws"
@@ -763,6 +773,7 @@ class WecomChannel(BaseChannel):
                 ws_loop.close()
             except Exception:
                 pass
+            self._ws_loop = None
 
     async def start(self) -> None:
         if not self.enabled:
@@ -804,6 +815,11 @@ class WecomChannel(BaseChannel):
         if self._client:
             try:
                 self._client.disconnect()
+            except Exception:
+                pass
+        if self._ws_loop is not None:
+            try:
+                self._ws_loop.call_soon_threadsafe(self._ws_loop.stop)
             except Exception:
                 pass
         if self._ws_thread:
