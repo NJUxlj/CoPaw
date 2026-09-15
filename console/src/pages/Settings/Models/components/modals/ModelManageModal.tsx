@@ -1,6 +1,5 @@
 import type { ProviderInfo } from "../../../../../api/types";
 import { LocalModelManageModal } from "./LocalModelManageModal";
-import { OllamaModelManageModal } from "./OllamaModelManageModal";
 import { RemoteModelManageModal } from "./RemoteModelManageModal";
 
 interface ModelManageModalProps {
@@ -8,6 +7,7 @@ interface ModelManageModalProps {
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
+  onProviderUpdated?: (provider: ProviderInfo) => void;
 }
 
 export function ModelManageModal({
@@ -15,20 +15,10 @@ export function ModelManageModal({
   open,
   onClose,
   onSaved,
+  onProviderUpdated,
 }: ModelManageModalProps) {
   // Route to the appropriate specialized modal based on provider type
-  if (provider.id === "ollama") {
-    return (
-      <OllamaModelManageModal
-        provider={provider}
-        open={open}
-        onClose={onClose}
-        onSaved={onSaved}
-      />
-    );
-  }
-
-  if (provider.is_local) {
+  if (provider.id === "qwenpaw-local") {
     return (
       <LocalModelManageModal
         provider={provider}
@@ -45,6 +35,7 @@ export function ModelManageModal({
       open={open}
       onClose={onClose}
       onSaved={onSaved}
+      onProviderUpdated={onProviderUpdated}
     />
   );
 }

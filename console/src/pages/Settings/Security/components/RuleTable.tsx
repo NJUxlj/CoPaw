@@ -1,4 +1,12 @@
-import { Table, Tag, Switch, Button, Tooltip } from "@agentscope-ai/design";
+import { useMemo } from "react";
+import {
+  Table,
+  Tag,
+  Switch,
+  Button,
+  Tooltip,
+  Collapse,
+} from "@agentscope-ai/design";
 import { Space } from "antd";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -18,15 +26,31 @@ interface RuleTableProps {
   rules: MergedRule[];
   enabled: boolean;
   onToggleRule: (ruleId: string, currentlyDisabled: boolean) => void;
+  onToggleAutoDeny: (ruleId: string, currentlyAutoDeny: boolean) => void;
   onPreviewRule: (rule: MergedRule) => void;
   onEditRule: (rule: MergedRule) => void;
   onDeleteRule: (ruleId: string) => void;
+}
+
+function groupRulesByCategory(
+  rules: MergedRule[],
+): Record<string, MergedRule[]> {
+  const groups: Record<string, MergedRule[]> = {};
+  for (const rule of rules) {
+    const category = rule.category || "other";
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(rule);
+  }
+  return groups;
 }
 
 export function RuleTable({
   rules,
   enabled,
   onToggleRule,
+  onToggleAutoDeny,
   onPreviewRule,
   onEditRule,
   onDeleteRule,
@@ -35,12 +59,14 @@ export function RuleTable({
   const { isDark } = useTheme();
   const darkBtnStyle = isDark ? { color: "rgba(255,255,255,0.75)" } : undefined;
 
+  const groupedRules = useMemo(() => groupRulesByCategory(rules), [rules]);
+
   const columns = [
     {
       title: t("security.rules.id"),
       dataIndex: "id",
       key: "id",
-      width: 220,
+      width: 280,
       render: (id: string, record: MergedRule) => (
         <span style={{ opacity: record.disabled ? 0.4 : 1 }}>{id}</span>
       ),
@@ -92,7 +118,7 @@ export function RuleTable({
       width: 100,
       render: (source: string, record: MergedRule) => (
         <Tag
-          color={source === "builtin" ? "geekblue" : "green"}
+          color={source === "builtin" ? "rgba(142, 140, 153, 1)" : "green"}
           style={{ opacity: record.disabled ? 0.4 : 1 }}
         >
           {source === "builtin"
@@ -102,9 +128,34 @@ export function RuleTable({
       ),
     },
     {
+      title: (
+        <Tooltip title={t("security.rules.autoDenyTooltip")}>
+          <span>{t("security.rules.autoDeny")}</span>
+        </Tooltip>
+      ),
+      key: "autoDeny",
+      width: 100,
+      render: (_: unknown, record: MergedRule) => (
+        <Tooltip
+          title={
+            record.autoDeny
+              ? t("security.rules.autoDenyDisable")
+              : t("security.rules.autoDenyEnable")
+          }
+        >
+          <Switch
+            size="small"
+            checked={record.autoDeny}
+            onChange={() => onToggleAutoDeny(record.id, record.autoDeny)}
+            disabled={!enabled || record.disabled}
+          />
+        </Tooltip>
+      ),
+    },
+    {
       title: t("security.rules.actions"),
       key: "actions",
-      width: 160,
+      width: 100,
       render: (_: unknown, record: MergedRule) => (
         <Space size="small">
           <Tooltip
@@ -130,12 +181,11 @@ export function RuleTable({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 4,
+                gap: 8,
                 ...darkBtnStyle,
               }}
             >
-              <Eye size={14} />
-              {t("security.rules.preview")}
+              <Eye size={16} />
             </Button>
           )}
           {record.source === "custom" && (
@@ -167,14 +217,44 @@ export function RuleTable({
     },
   ];
 
+  const categoryKeys = Object.keys(groupedRules);
+
+  const collapseItems = categoryKeys.map((category) => {
+    const categoryRules = groupedRules[category];
+    const enabledCount = categoryRules.filter((r) => !r.disabled).length;
+    const totalCount = categoryRules.length;
+    const categoryLabel =
+      t(`security.rules.categories.${category}`, { defaultValue: "" }) ||
+      category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+    return {
+      key: category,
+      label: (
+        <span className={styles.collapseCategoryLabel}>
+          {categoryLabel}
+          <Tag style={{ marginLeft: 8 }}>
+            {enabledCount}/{totalCount}
+          </Tag>
+        </span>
+      ),
+      children: (
+        <Table
+          dataSource={categoryRules}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          size="small"
+          className={styles.ruleTable}
+        />
+      ),
+    };
+  });
+
   return (
-    <Table
-      dataSource={rules}
-      columns={columns}
-      rowKey="id"
-      pagination={false}
-      size="small"
-      className={styles.ruleTable}
+    <Collapse
+      defaultActiveKey={categoryKeys}
+      items={collapseItems}
+      className={styles.ruleCollapse}
     />
   );
 }

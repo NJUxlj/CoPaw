@@ -1,85 +1,81 @@
-import { Layout } from "antd";
-import { Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { Suspense, useMemo } from "react";
+import { Layout, Spin } from "antd";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Sidebar from "../Sidebar";
 import Header from "../Header";
-import ConsoleCronBubble from "../../components/ConsoleCronBubble";
+import ConsolePollService from "../../components/ConsolePollService";
+import { AgentStatusPollingController } from "../../components/AgentStatusPollingController";
+import { ChunkErrorBoundary } from "../../components/ChunkErrorBoundary";
+import { useSyncCodingMode } from "../../stores/useSyncCodingMode";
 import styles from "../index.module.less";
-import Chat from "../../pages/Chat";
-import ChannelsPage from "../../pages/Control/Channels";
-import SessionsPage from "../../pages/Control/Sessions";
-import CronJobsPage from "../../pages/Control/CronJobs";
-import HeartbeatPage from "../../pages/Control/Heartbeat";
-import AgentConfigPage from "../../pages/Agent/Config";
-import SkillsPage from "../../pages/Agent/Skills";
-import ToolsPage from "../../pages/Agent/Tools";
-import WorkspacePage from "../../pages/Agent/Workspace";
-import MCPPage from "../../pages/Agent/MCP";
-import ModelsPage from "../../pages/Settings/Models";
-import EnvironmentsPage from "../../pages/Settings/Environments";
-import SecurityPage from "../../pages/Settings/Security";
-import TokenUsagePage from "../../pages/Settings/TokenUsage";
-import VoiceTranscriptionPage from "../../pages/Settings/VoiceTranscription";
-import AgentsPage from "../../pages/Settings/Agents";
+import { useRoutes } from "../../plugins/registry/hooks";
+import { Slot } from "../../plugins/registry/Slot";
+import { pickSelectedKey } from "./routeSelection";
 
 const { Content } = Layout;
 
-const pathToKey: Record<string, string> = {
-  "/chat": "chat",
-  "/channels": "channels",
-  "/sessions": "sessions",
-  "/cron-jobs": "cron-jobs",
-  "/heartbeat": "heartbeat",
-  "/skills": "skills",
-  "/tools": "tools",
-  "/mcp": "mcp",
-  "/workspace": "workspace",
-  "/agents": "agents",
-  "/models": "models",
-  "/environments": "environments",
-  "/agent-config": "agent-config",
-  "/security": "security",
-  "/token-usage": "token-usage",
-  "/voice-transcription": "voice-transcription",
-};
-
-export default function MainLayout() {
+export default function MainLayout({ hubMode = false }: { hubMode?: boolean }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const currentPath = location.pathname;
-  const selectedKey = pathToKey[currentPath] || "chat";
+  const routes = useRoutes();
+
+  // Backend is the source of truth for Coding Mode state — refill the
+  // in-memory store every time the selected agent changes.
+  useSyncCodingMode();
+
+  const selectedKey = useMemo(
+    () => pickSelectedKey(currentPath, routes),
+    [currentPath, routes],
+  );
+  const settingsCenterActive = selectedKey === "core.settings-center";
+
+  // PawApp inline routes (`/apps/<id>`) are rendered *inside* the App Center
+  // page (with its "← App Center" bar), never as standalone full-page routes.
+  // They stay in the registry so the App Center can look up their component;
+  // we just skip them here. The App Center's own `/apps/:appId` route (with a
+  // colon) is kept, so a deep-link / refresh lands on the App Center wrapper.
+  const renderableRoutes = useMemo(
+    () => routes.filter((r) => !/^\/apps\/(?!:)/.test(r.path)),
+    [routes],
+  );
 
   return (
     <Layout className={styles.mainLayout}>
-      <Sidebar selectedKey={selectedKey} />
-      <Layout>
-        <Header selectedKey={selectedKey} />
+      {!settingsCenterActive && (
+        <Sidebar selectedKey={selectedKey} hubMode={hubMode} />
+      )}
+      <Layout className={styles.mainContentLayout}>
+        <Header showBrand={settingsCenterActive} />
         <Content className="page-container">
-          <ConsoleCronBubble />
+          <ConsolePollService />
+          <AgentStatusPollingController />
+          <Slot name="content.statusBar" kind="fill" />
           <div className="page-content">
-            <Routes>
-              <Route path="/" element={<Navigate to="/chat" replace />} />
-              <Route path="/chat/*" element={<Chat />} />
-              <Route path="/channels" element={<ChannelsPage />} />
-              <Route path="/sessions" element={<SessionsPage />} />
-              <Route path="/cron-jobs" element={<CronJobsPage />} />
-              <Route path="/heartbeat" element={<HeartbeatPage />} />
-              <Route path="/skills" element={<SkillsPage />} />
-              <Route path="/tools" element={<ToolsPage />} />
-              <Route path="/mcp" element={<MCPPage />} />
-              <Route path="/workspace" element={<WorkspacePage />} />
-              <Route path="/agents" element={<AgentsPage />} />
-              <Route path="/models" element={<ModelsPage />} />
-              <Route path="/environments" element={<EnvironmentsPage />} />
-              <Route path="/agent-config" element={<AgentConfigPage />} />
-              <Route path="/security" element={<SecurityPage />} />
-              <Route path="/token-usage" element={<TokenUsagePage />} />
-              <Route
-                path="/voice-transcription"
-                element={<VoiceTranscriptionPage />}
-              />
-            </Routes>
+            <ChunkErrorBoundary
+              resetKey={currentPath}
+              canRestartRuntime={hubMode}
+            >
+              <Suspense
+                fallback={
+                  <Spin
+                    tip={t("common.loading")}
+                    style={{ display: "block", margin: "20vh auto" }}
+                  />
+                }
+              >
+                <Routes>
+                  {renderableRoutes.map((r) => (
+                    <Route key={r.id} path={r.path} element={<r.Component />} />
+                  ))}
+                </Routes>
+              </Suspense>
+            </ChunkErrorBoundary>
           </div>
         </Content>
       </Layout>
+      <Slot name="overlay.global" kind="fill" />
     </Layout>
   );
 }

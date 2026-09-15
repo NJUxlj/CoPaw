@@ -1,23 +1,29 @@
 import { useEffect } from "react";
 import { Modal, Form, Input, Select } from "@agentscope-ai/design";
+import type { FormInstance } from "antd";
 import { useTranslation } from "react-i18next";
 import type { ToolGuardRule } from "../../../../api/modules/security";
 
 const SEVERITY_OPTIONS = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"];
 const CATEGORY_OPTIONS = [
   "command_injection",
+  "code_execution",
   "data_exfiltration",
   "path_traversal",
   "sensitive_file_access",
   "network_abuse",
   "credential_exposure",
   "resource_abuse",
-  "code_execution",
+  "privilege_escalation",
+  "prompt_injection",
 ];
 const BUILTIN_TOOLS = [
   "execute_shell_command",
   "execute_python_code",
-  "browser_use",
+  "browser",
+  // ── DEPRECATED BROWSER (remove together with backend deprecated_browser/) ──
+  "browser",
+  // ── END DEPRECATED BROWSER ──
   "desktop_screenshot",
   "view_image",
   "read_file",
@@ -35,7 +41,7 @@ interface RuleModalProps {
   existingRuleIds: string[];
   onOk: () => void;
   onCancel: () => void;
-  form: any;
+  form: FormInstance;
 }
 
 export function RuleModal({
@@ -88,7 +94,7 @@ export function RuleModal({
       okText={t("common.confirm")}
       cancelText={t("common.cancel")}
       width={640}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
         <Form.Item
@@ -133,7 +139,10 @@ export function RuleModal({
         </Form.Item>
         <Form.Item label={t("security.rules.categoryLabel")} name="category">
           <Select
-            options={CATEGORY_OPTIONS.map((c) => ({ label: c, value: c }))}
+            options={CATEGORY_OPTIONS.map((c) => ({
+              label: t(`security.rules.categories.${c}`, { defaultValue: c }),
+              value: c,
+            }))}
           />
         </Form.Item>
         <Form.Item

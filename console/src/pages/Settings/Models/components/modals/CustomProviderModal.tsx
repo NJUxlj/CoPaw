@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Form, Input, Modal, Select, message } from "@agentscope-ai/design";
+import { Form, Input, Modal, Select } from "@agentscope-ai/design";
 import api from "../../../../../api";
 import { useTranslation } from "react-i18next";
+import { useAppMessage } from "../../../../../hooks/useAppMessage";
 
 interface CustomProviderModalProps {
   open: boolean;
@@ -15,6 +16,7 @@ export function CustomProviderModal({
   onSaved,
 }: CustomProviderModalProps) {
   const { t } = useTranslation();
+  const { message } = useAppMessage();
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
@@ -115,6 +117,10 @@ export function CustomProviderModal({
               {
                 value: "OpenAIChatModel",
                 label: t("models.protocolOpenAI"),
+              },
+              {
+                value: "OpenAIResponseModel",
+                label: t("models.protocolOpenAIResponse"),
               },
               {
                 value: "AnthropicChatModel",

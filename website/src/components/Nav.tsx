@@ -1,17 +1,25 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { Menu, X, BookOpen, Globe, Download, ChevronDown } from "lucide-react";
+import { QwenpawMascot } from "./QwenpawMascot";
+import { useTranslation } from "react-i18next";
+import { useSiteLanguage } from "@/i18n/SiteLanguageContext";
+import { useSiteConfig } from "@/config-context";
 import {
-  Menu,
-  X,
-  BookOpen,
-  Github,
-  Globe,
-  FileText,
-  Download,
-  ChevronDown,
-} from "lucide-react";
-import { CopawMascot } from "./CopawMascot";
-import { t, type Lang } from "../i18n";
+  GitHubIcon,
+  BlogIcon,
+  NoteIcon,
+  AgentScopePlatformIcon,
+  LuckyBagIcon,
+  SparkChatAnywhereLineIcon,
+} from "./Icon";
+import {
+  COMMUNITY_BENEFITS_URL,
+  CommunityBenefitsTriggerLabel,
+} from "./NavCommunityBenefits";
+
+const AGENTSCOPE_PLATFORM_URL = "https://platform.agentscope.io/";
+const COMMUNITY_URL = "https://platform.agentscope.io/community";
 
 const AGENTSCOPE_LOGO_SIZE = 22;
 
@@ -38,38 +46,61 @@ function AgentScopeLogo() {
   );
 }
 
-interface NavProps {
-  projectName: string;
-  lang: Lang;
-  onLangClick: () => void;
-  docsPath: string;
-  repoUrl: string;
-}
+const navTextClass = "font-inter text-[14px] font-medium leading-5";
 
-export function Nav({
-  projectName,
-  lang,
-  onLangClick,
-  docsPath,
-  repoUrl: _repoUrl,
-}: NavProps) {
+const navLinkBaseClass = `inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-1 py-1.5 ${navTextClass} text-neutral-800 no-underline transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`;
+
+const navLinkOrangeClass = `${navLinkBaseClass} hover:!text-orange-400 focus-visible:outline-orange-400`;
+const navLinkBlueClass = `${navLinkBaseClass} hover:!text-[#0064FD] focus-visible:outline-[#0064FD]`;
+
+const navDownloadBtnClass = `inline-flex min-w-[6.75rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 ${navTextClass} text-neutral-800 no-underline transition-colors cursor-pointer border border-[#F3F1F0] bg-(--color-card-fill) hover:bg-(--color-secondary)`;
+
+const navIconStroke = 1.5;
+const exploreMenuItemClass = `${navLinkOrangeClass} w-full justify-start px-3 py-2`;
+
+export function Nav() {
+  const { projectName, docsPath } = useSiteConfig();
+  const { toggleLang } = useSiteLanguage();
+  const { t, i18n } = useTranslation();
+  const isZh = i18n.resolvedLanguage === "zh";
   const [open, setOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
-  const linkClass =
-    "nav-item text-[var(--text-muted)] hover:text-[var(--text)] transition-colors";
+  const [exploreOpen, setExploreOpen] = useState(false);
+  const exploreRef = useRef<HTMLDivElement>(null);
+  const closeExploreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const docsBase = docsPath.replace(/\/$/, "") || "/docs";
+
+  const clearExploreTimer = () => {
+    if (closeExploreTimerRef.current) {
+      clearTimeout(closeExploreTimerRef.current);
+      closeExploreTimerRef.current = null;
+    }
+  };
+
+  const openExplore = () => {
+    clearExploreTimer();
+    setExploreOpen(true);
+  };
+
+  const scheduleCloseExplore = () => {
+    clearExploreTimer();
+    closeExploreTimerRef.current = setTimeout(() => {
+      setExploreOpen(false);
+      closeExploreTimerRef.current = null;
+    }, 120);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
-        setMoreOpen(false);
+      const target = event.target as Node;
+      if (exploreRef.current && !exploreRef.current.contains(target)) {
+        setExploreOpen(false);
       }
     };
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && moreOpen) {
-        setMoreOpen(false);
-      }
+      if (event.key !== "Escape") return;
+      setExploreOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
@@ -77,281 +108,285 @@ export function Nav({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [moreOpen]);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearExploreTimer();
+    };
+  }, []);
+
   return (
-    <header
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 10,
-        background: "var(--surface)",
-        borderBottom: "1px solid var(--border)",
-      }}
-    >
-      <nav
-        style={{
-          margin: "0 auto",
-          maxWidth: "var(--container)",
-          padding: "var(--space-2) var(--space-4)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "var(--space-3)",
-        }}
-      >
+    <header className="sticky top-0 z-99 border-b border-border bg-white">
+      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 md:px-6 lg:gap-3">
         <Link
           to="/"
-          className="nav-brand-link"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            fontWeight: 600,
-            fontSize: "1.125rem",
-            color: "var(--text)",
-          }}
+          className="nav-brand-link flex shrink-0 items-center gap-2 text-lg font-semibold text-neutral-900 no-underline"
           aria-label={projectName}
         >
-          <span
-            className="nav-brand-logo"
-            style={{ marginTop: -5, display: "flex" }}
-          >
-            <CopawMascot size={60} />
+          <span className="nav-brand-logo -mt-1 flex">
+            <QwenpawMascot size={120} />
           </span>
         </Link>
-        <div
-          className="nav-links"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-4)",
-          }}
-        >
-          <div ref={moreRef} style={{ position: "relative" }}>
-            <button
-              type="button"
-              onClick={() => setMoreOpen((o) => !o)}
-              className={linkClass}
-              style={{
-                background: "none",
-                border: "none",
-                padding: "var(--space-1) var(--space-2)",
-              }}
-              aria-expanded={moreOpen}
-              aria-haspopup="true"
-              aria-label={t(lang, "nav.more")}
-            >
-              <ChevronDown size={18} strokeWidth={1.5} aria-hidden />
-              <span>{t(lang, "nav.more")}</span>
-            </button>
-            {moreOpen && (
-              <div
-                role="menu"
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 0.5rem)",
-                  right: 0,
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "0.5rem",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                  minWidth: "10rem",
-                  zIndex: 50,
-                  overflow: "hidden",
-                }}
-              >
-                <Link
-                  to="/release-notes"
-                  role="menuitem"
-                  className="nav-dropdown-item"
-                  onClick={() => setMoreOpen(false)}
-                >
-                  <FileText size={16} strokeWidth={1.5} aria-hidden />
-                  <span>{t(lang, "nav.releaseNotes")}</span>
-                </Link>
-                <Link
-                  to={`${docsBase}/quickstart`}
-                  role="menuitem"
-                  className="nav-dropdown-item"
-                  onClick={() => setMoreOpen(false)}
-                >
-                  <Download size={16} strokeWidth={1.5} aria-hidden />
-                  <span>{t(lang, "nav.download")}</span>
-                </Link>
-              </div>
-            )}
-          </div>
-          <Link to={docsBase} className={linkClass}>
-            <BookOpen size={18} strokeWidth={1.5} aria-hidden />
-            <span>{t(lang, "nav.docs")}</span>
-          </Link>
-          <button
-            type="button"
-            onClick={onLangClick}
-            className={linkClass}
-            style={{
-              background: "none",
-              border: "none",
-              padding: "var(--space-1) var(--space-2)",
-            }}
-            aria-label={t(lang, "nav.lang")}
-          >
-            <Globe size={18} strokeWidth={1.5} aria-hidden />
-            <span>{t(lang, "nav.lang")}</span>
-          </button>
-          <a
-            href="https://github.com/agentscope-ai/CoPaw"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={linkClass}
-            title="CoPaw on GitHub"
-          >
-            <Github size={18} strokeWidth={1.5} aria-hidden />
-            <span>{t(lang, "nav.github")}</span>
-          </a>
+        <div className="nav-links hidden min-[641px]:flex min-[641px]:min-w-0 min-[641px]:flex-1 min-[641px]:items-center min-[641px]:justify-end min-[641px]:gap-3 lg:gap-5 xl:gap-6">
           <a
             href="https://agentscope.io/"
             target="_blank"
             rel="noopener noreferrer"
-            className={linkClass}
-            title={
-              lang === "zh" ? "基于 AgentScope 打造" : "Built on AgentScope"
-            }
-            aria-label={t(lang, "nav.agentscopeTeam")}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              whiteSpace: "nowrap",
-              fontSize: "inherit",
-              fontWeight: "inherit",
-            }}
+            className={`${navLinkBlueClass} whitespace-nowrap`}
+            title={isZh ? "基于 AgentScope 打造" : "Built on AgentScope"}
+            aria-label={t("nav.agentscopeTeam")}
           >
             <AgentScopeLogo />
-            <span style={{ fontSize: "inherit" }}>
-              {t(lang, "nav.agentscopeTeam")}
-            </span>
+            <span>{t("nav.agentscopeTeam")}</span>
           </a>
+          <Link to="/blog" className={navLinkOrangeClass}>
+            <BlogIcon size={18} aria-hidden />
+            <span>{t("nav.blog")}</span>
+          </Link>
+
+          <div
+            ref={exploreRef}
+            className="relative"
+            onMouseEnter={openExplore}
+            onMouseLeave={scheduleCloseExplore}
+          >
+            <span
+              role="button"
+              tabIndex={0}
+              className={`${navLinkOrangeClass} cursor-pointer`}
+              aria-expanded={exploreOpen}
+              aria-haspopup="true"
+              onClick={() => {
+                setExploreOpen((v) => !v);
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                setExploreOpen((v) => !v);
+              }}
+            >
+              <span>{t("nav.explore")}</span>
+              <ChevronDown
+                size={16}
+                strokeWidth={navIconStroke}
+                className={`transition-transform ${
+                  exploreOpen ? "rotate-180" : ""
+                }`}
+                aria-hidden
+              />
+            </span>
+            {exploreOpen && (
+              <div
+                className="absolute left-1/2 top-full z-100 mt-2 min-w-44 -translate-x-1/2 rounded-lg border border-neutral-100 bg-white py-2 shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+                role="menu"
+                onMouseEnter={openExplore}
+                onMouseLeave={scheduleCloseExplore}
+              >
+                <div className="flex flex-col gap-0.5 px-1">
+                  <a
+                    href={AGENTSCOPE_PLATFORM_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={exploreMenuItemClass}
+                    title={t("nav.platformTitle")}
+                    aria-label={t("nav.platformTitle")}
+                    onClick={() => setExploreOpen(false)}
+                  >
+                    <AgentScopePlatformIcon size={18} />
+                    <span>{t("nav.platform")}</span>
+                  </a>
+                  <a
+                    href={COMMUNITY_BENEFITS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={exploreMenuItemClass}
+                    onClick={() => setExploreOpen(false)}
+                  >
+                    <LuckyBagIcon />
+                    <CommunityBenefitsTriggerLabel badgeAfter />
+                  </a>
+                  <a
+                    href="https://github.com/agentscope-ai/QwenPaw"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={exploreMenuItemClass}
+                    title="QwenPaw on GitHub"
+                    onClick={() => setExploreOpen(false)}
+                  >
+                    <GitHubIcon />
+                    <span>{t("nav.github")}</span>
+                  </a>
+                  <Link
+                    to="/release-notes"
+                    className={exploreMenuItemClass}
+                    onClick={() => setExploreOpen(false)}
+                  >
+                    <NoteIcon />
+                    <span>{t("nav.releaseNotes")}</span>
+                  </Link>
+                  <a
+                    href={COMMUNITY_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={exploreMenuItemClass}
+                    title={t("nav.discussion")}
+                    onClick={() => setExploreOpen(false)}
+                  >
+                    <SparkChatAnywhereLineIcon size={18} />
+                    <span>{t("nav.discussion")}</span>
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+          <Link to={docsBase} className={navLinkOrangeClass}>
+            <BookOpen size={18} strokeWidth={navIconStroke} aria-hidden />
+            <span>{t("nav.docs")}</span>
+          </Link>
+
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={toggleLang}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              toggleLang();
+            }}
+            className={`${navLinkOrangeClass} cursor-pointer`}
+            aria-label={t("nav.lang")}
+          >
+            <Globe size={18} strokeWidth={navIconStroke} aria-hidden />
+            <span>{t("nav.lang")}</span>
+          </span>
+          <Link to="/downloads" className={navDownloadBtnClass}>
+            <Download size={18} strokeWidth={navIconStroke} aria-hidden />
+            <span>{t("nav.download")}</span>
+          </Link>
         </div>
+
         <button
           type="button"
-          className="nav-mobile-toggle"
+          className="nav-mobile-toggle flex min-[641px]:hidden items-center justify-center rounded-md border-0 bg-transparent p-2 text-neutral-900"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-label={open ? "Close menu" : "Open menu"}
-          style={{
-            display: "none",
-            background: "none",
-            border: "none",
-            padding: "var(--space-2)",
-            color: "var(--text)",
-          }}
         >
           {open ? <X size={24} /> : <Menu size={24} />}
         </button>
       </nav>
+
+      {/* 移动端菜单 */}
       <div
-        className="nav-mobile"
-        style={{
-          display: open ? "flex" : "none",
-          padding: "var(--space-2) var(--space-4)",
-          borderTop: "1px solid var(--border)",
-          background: "var(--surface)",
-          flexDirection: "column",
-          gap: "var(--space-2)",
-        }}
+        className={`nav-mobile flex min-[641px]:hidden flex-col gap-2 border-t border-neutral-100 bg-white px-4 py-3 sm:px-8 ${
+          open ? "" : "hidden"
+        }`}
       >
         <Link
-          to="/release-notes"
-          className={linkClass}
-          onClick={() => setOpen(false)}
-        >
-          <FileText size={18} /> {t(lang, "nav.releaseNotes")}
-        </Link>
-        <Link
-          to={`${docsBase}/quickstart`}
-          className={linkClass}
-          onClick={() => setOpen(false)}
-        >
-          <Download size={18} /> {t(lang, "nav.download")}
-        </Link>
-        <Link
           to={docsBase}
-          className={linkClass}
+          className={navLinkOrangeClass}
           onClick={() => setOpen(false)}
         >
-          <BookOpen size={18} /> {t(lang, "nav.docs")}
+          <BookOpen size={18} strokeWidth={navIconStroke} /> {t("nav.docs")}
         </Link>
-        <button
-          type="button"
-          className={linkClass}
-          onClick={() => {
-            onLangClick();
-            setOpen(false);
-          }}
-          style={{ background: "none", border: "none", textAlign: "left" }}
+        <Link
+          to="/blog"
+          className={navLinkOrangeClass}
+          onClick={() => setOpen(false)}
         >
-          <Globe size={18} /> {t(lang, "nav.lang")}
-        </button>
+          <BlogIcon size={18} aria-hidden /> {t("nav.blog")}
+        </Link>
         <a
-          href="https://github.com/agentscope-ai/CoPaw"
+          href="https://github.com/agentscope-ai/QwenPaw"
           target="_blank"
           rel="noopener noreferrer"
-          className={linkClass}
+          className={navLinkOrangeClass}
           onClick={() => setOpen(false)}
-          title="CoPaw on GitHub"
+          title="QwenPaw on GitHub"
         >
-          <Github size={18} /> {t(lang, "nav.github")}
+          <GitHubIcon /> {t("nav.github")}
+        </a>
+        <a
+          href={AGENTSCOPE_PLATFORM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={navLinkOrangeClass}
+          onClick={() => setOpen(false)}
+          title={t("nav.platformTitle")}
+          aria-label={t("nav.platformTitle")}
+        >
+          <AgentScopePlatformIcon size={18} />
+          <span>{t("nav.platform")}</span>
         </a>
         <a
           href="https://agentscope.io/"
           target="_blank"
           rel="noopener noreferrer"
-          className={linkClass}
+          className={`${navLinkBlueClass} inline-flex items-center gap-2`}
           onClick={() => setOpen(false)}
-          title={lang === "zh" ? "基于 AgentScope 打造" : "Built on AgentScope"}
-          aria-label={t(lang, "nav.agentscopeTeam")}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "var(--space-1)",
-            fontSize: "inherit",
-            fontWeight: "inherit",
-          }}
+          title={isZh ? "基于 AgentScope 打造" : "Built on AgentScope"}
+          aria-label={t("nav.agentscopeTeam")}
         >
           <AgentScopeLogo />
-          <span style={{ fontSize: "inherit" }}>
-            {t(lang, "nav.agentscopeTeam")}
-          </span>
+          <span>{t("nav.agentscopeTeam")}</span>
         </a>
+
+        <a
+          href={COMMUNITY_BENEFITS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={navLinkOrangeClass}
+          onClick={() => setOpen(false)}
+        >
+          <LuckyBagIcon />
+          <CommunityBenefitsTriggerLabel badgeAfter />
+        </a>
+
+        <span
+          role="button"
+          tabIndex={0}
+          className={`${navLinkOrangeClass} w-full cursor-pointer text-left`}
+          onClick={() => {
+            toggleLang();
+            setOpen(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" && e.key !== " ") return;
+            e.preventDefault();
+            toggleLang();
+            setOpen(false);
+          }}
+        >
+          <Globe size={18} strokeWidth={navIconStroke} /> {t("nav.lang")}
+        </span>
+        <Link
+          to="/release-notes"
+          className={navLinkOrangeClass}
+          onClick={() => setOpen(false)}
+        >
+          <NoteIcon />
+          {t("nav.releaseNotes")}
+        </Link>
+        <a
+          href={COMMUNITY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={navLinkOrangeClass}
+          onClick={() => setOpen(false)}
+        >
+          <SparkChatAnywhereLineIcon size={18} />
+          {t("nav.discussion")}
+        </a>
+        <Link
+          to="/downloads"
+          className={navLinkOrangeClass}
+          onClick={() => setOpen(false)}
+        >
+          <Download size={18} strokeWidth={navIconStroke} />
+          {t("nav.download")}
+        </Link>
       </div>
-      <style>{`
-        .nav-dropdown-item {
-          display: flex;
-          align-items: center;
-          gap: var(--space-2);
-          padding: var(--space-2) var(--space-3);
-          white-space: nowrap;
-          color: var(--text-muted);
-          transition: all 0.15s ease;
-          text-decoration: none;
-        }
-
-        .nav-dropdown-item:hover,
-        .nav-dropdown-item:focus-visible {
-          background: var(--bg);
-          color: var(--text);
-          outline: none;
-        }
-
-        @media (max-width: 640px) {
-          .nav-links { display: none !important; }
-          .nav-mobile-toggle { display: flex !important; }
-        }
-        @media (min-width: 641px) {
-          .nav-mobile { display: none !important; }
-        }
-      `}</style>
     </header>
   );
 }

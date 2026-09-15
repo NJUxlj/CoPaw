@@ -1,52 +1,58 @@
 <div align="center">
 
-# CoPaw
+# QwenPaw
 
-[![GitHub Repo](https://img.shields.io/badge/GitHub-Repo-black.svg?logo=github)](https://github.com/agentscope-ai/CoPaw)
-[![PyPI](https://img.shields.io/pypi/v/copaw?color=3775A9&label=PyPI&logo=pypi)](https://pypi.org/project/copaw/)
-[![Documentation](https://img.shields.io/badge/Docs-Website-green.svg?logo=readthedocs&label=Docs)](https://copaw.agentscope.io/)
-[![Python Version](https://img.shields.io/badge/python-3.10%20~%20%3C3.14-blue.svg?logo=python&label=Python)](https://www.python.org/downloads/)
-[![Last Commit](https://img.shields.io/github/last-commit/agentscope-ai/CoPaw)](https://github.com/agentscope-ai/CoPaw)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-Repo-black.svg?logo=github)](https://github.com/agentscope-ai/QwenPaw)
+[![PyPI](https://img.shields.io/pypi/v/qwenpaw?color=3775A9&label=PyPI&logo=pypi)](https://pypi.org/project/qwenpaw/)
+[![Documentation](https://img.shields.io/badge/Docs-Website-green.svg?logo=readthedocs&label=Docs)](https://qwenpaw.agentscope.io/)
+[![Python Version](https://img.shields.io/badge/python-3.11%20~%20%3C3.14-blue.svg?logo=python&label=Python)](https://www.python.org/downloads/)
+[![Last Commit](https://img.shields.io/github/last-commit/agentscope-ai/QwenPaw)](https://github.com/agentscope-ai/QwenPaw)
 [![License](https://img.shields.io/badge/license-Apache%202.0-red.svg?logo=apache&label=License)](LICENSE)
 [![Code Style](https://img.shields.io/badge/code%20style-black-black.svg?logo=python&label=CodeStyle)](https://github.com/psf/black)
-[![GitHub Stars](https://img.shields.io/github/stars/agentscope-ai/CoPaw?style=flat&logo=github&color=yellow&label=Stars)](https://github.com/agentscope-ai/CoPaw/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/agentscope-ai/CoPaw?style=flat&logo=github&color=purple&label=Forks)](https://github.com/agentscope-ai/CoPaw/network)
-[![DeepWiki](https://img.shields.io/badge/DeepWiki-Ask_Devin-navy.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAyCAYAAAAnWDnqAAAAAXNSR0IArs4c6QAAA05JREFUaEPtmUtyEzEQhtWTQyQLHNak2AB7ZnyXZMEjXMGeK/AIi+QuHrMnbChYY7MIh8g01fJoopFb0uhhEqqcbWTp06/uv1saEDv4O3n3dV60RfP947Mm9/SQc0ICFQgzfc4CYZoTPAswgSJCCUJUnAAoRHOAUOcATwbmVLWdGoH//PB8mnKqScAhsD0kYP3j/Yt5LPQe2KvcXmGvRHcDnpxfL2zOYJ1mFwrryWTz0advv1Ut4CJgf5uhDuDj5eUcAUoahrdY/56ebRWeraTjMt/00Sh3UDtjgHtQNHwcRGOC98BJEAEymycmYcWwOprTgcB6VZ5JK5TAJ+fXGLBm3FDAmn6oPPjR4rKCAoJCal2eAiQp2x0vxTPB3ALO2CRkwmDy5WohzBDwSEFKRwPbknEggCPB/imwrycgxX2NzoMCHhPkDwqYMr9tRcP5qNrMZHkVnOjRMWwLCcr8ohBVb1OMjxLwGCvjTikrsBOiA6fNyCrm8V1rP93iVPpwaE+gO0SsWmPiXB+jikdf6SizrT5qKasx5j8ABbHpFTx+vFXp9EnYQmLx02h1QTTrl6eDqxLnGjporxl3NL3agEvXdT0WmEost648sQOYAeJS9Q7bfUVoMGnjo4AZdUMQku50McDcMWcBPvr0SzbTAFDfvJqwLzgxwATnCgnp4wDl6Aa+Ax283gghmj+vj7feE2KBBRMW3FzOpLOADl0Isb5587h/U4gGvkt5v60Z1VLG8BhYjbzRwyQZemwAd6cCR5/XFWLYZRIMpX39AR0tjaGGiGzLVyhse5C9RKC6ai42ppWPKiBagOvaYk8lO7DajerabOZP46Lby5wKjw1HCRx7p9sVMOWGzb/vA1hwiWc6jm3MvQDTogQkiqIhJV0nBQBTU+3okKCFDy9WwferkHjtxib7t3xIUQtHxnIwtx4mpg26/HfwVNVDb4oI9RHmx5WGelRVlrtiw43zboCLaxv46AZeB3IlTkwouebTr1y2NjSpHz68WNFjHvupy3q8TFn3Hos2IAk4Ju5dCo8B3wP7VPr/FGaKiG+T+v+TQqIrOqMTL1VdWV1DdmcbO8KXBz6esmYWYKPwDL5b5FA1a0hwapHiom0r/cKaoqr+27/XcrS5UwSMbQAAAABJRU5ErkJggg==)](https://deepwiki.com/agentscope-ai/CoPaw)
+[![GitHub Stars](https://img.shields.io/github/stars/agentscope-ai/QwenPaw?style=flat&logo=github&color=yellow&label=Stars)](https://github.com/agentscope-ai/QwenPaw/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/agentscope-ai/QwenPaw?style=flat&logo=github&color=purple&label=Forks)](https://github.com/agentscope-ai/QwenPaw/network)
+[![DeepWiki](https://img.shields.io/badge/DeepWiki-Ask_Devin-navy.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAyCAYAAAAnWDnqAAAAAXNSR0IArs4c6QAAA05JREFUaEPtmUtyEzEQhtWTQyQLHNak2AB7ZnyXZMEjXMGeK/AIi+QuHrMnbChYY7MIh8g01fJoopFb0uhhEqqcbWTp06/uv1saEDv4O3n3dV60RfP947Mm9/SQc0ICFQgzfc4CYZoTPAswgSJCCUJUnAAoRHOAUOcATwbmVLWdGoH//PB8mnKqScAhsD0kYP3j/Yt5LPQe2KvcXmGvRHcDnpxfL2zOYJ1mFwrryWTz0advv1Ut4CJgf5uhDuDj5eUcAUoahrdY/56ebRWeraTjMt/00Sh3UDtjgHtQNHwcRGOC98BJEAEymycmYcWwOprTgcB6VZ5JK5TAJ+fXGLBm3FDAmn6oPPjR4rKCAoJCal2eAiQp2x0vxTPB3ALO2CRkwmDy5WohzBDwSEFKRwPbknEggCPB/imwrycgxX2NzoMCHhPkDwqYMr9tRcP5qNrMZHkVnOjRMWwLCcr8ohBVb1OMjxLwGCvjTikrsBOiA6fNyCrm8V1rP93iVPpwaE+gO0SsWmPiXB+jikdf6SizrT5qKasx5j8ABbHpFTx+vFXp9EnYQmLx02h1QTTrl6eDqxLnGjporxl3NL3agEvXdT0WmEost648sQOYAeJS9Q7bfUVoMGnjo4AZdUMQku50McDcMWcBPvr0SzbTAFDfvJqwLzgxwATnCgnp4wDl6Aa+Ax283gghmj+vj7feE2KBBRMW3FzOpLOADl0Isb5587h/U4gGvkt5v60Z1VLG8BhYjbzRwyQZemwAd6cCR5/XFWLYZRIMpX39AR0tjaGGiGzLVyhse5C9RKC6ai42ppWPKiBagOvaYk8lO7DajerabOZP46Lby5wKjw1HCRx7p9sVMOWGzb/vA1hwiWc6jm3MvQDTogQkiqIhJV0nBQBTU+3okKCFDy9WwferkHjtxib7t3xIUQtHxnIwtx4mpg26/HfwVNVDb4oI9RHmx5WGelRVlrtiw43zboCLaxv46AZeB3IlTkwouebTr1y2NjSpHz68WNFjHvupy3q8TFn3Hos2IAk4Ju5dCo8B3wP7VPr/FGaKiG+T+v+TQqIrOqMTL1VdWV1DdmcbO8KXBz6esmYWYKPwDL5b5FA1a0hwapHiom0r/cKaoqr+27/XcrS5UwSMbQAAAABJRU5ErkJggg==)](https://deepwiki.com/agentscope-ai/QwenPaw)
 [![Discord](https://img.shields.io/badge/Discord-Join_Us-blueviolet.svg?logo=discord)](https://discord.gg/eYMpfnkG8h)
 [![X](https://img.shields.io/badge/X-Follow_Us-black.svg?logo=x)](https://x.com/agentscope_ai)
 [![DingTalk](https://img.shields.io/badge/DingTalk-Join_Us-orange.svg)](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11)
+[![AgentScope Platform](https://img.shields.io/badge/%E2%98%81_AgentScope_Platform-%F0%9F%90%BE_7%2F24_Online_%26_Free-FF6B2B.svg)](https://platform.agentscope.io/)
 
-[[ドキュメント](https://copaw.agentscope.io/)] [[English README](README.md)] [[中文 README](README_zh.md)]
+<a href="https://trendshift.io/repositories/25882" target="_blank"><img src="https://trendshift.io/api/badge/trendshift/repositories/25882/daily" alt="agentscope-ai%2FQwenPaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+
+[[ドキュメント](https://qwenpaw.agentscope.io/)] [[English](README.md)] [[中文](README_zh.md)] [[Русский](README_ru.md)]
 
 <p align="center">
-  <img src="https://img.alicdn.com/imgextra/i2/O1CN014TIqyO1U5wDiSbFfA_!!6000000002467-2-tps-816-192.png" alt="CoPaw Logo" width="120">
+  <img src="https://gw.alicdn.com/imgextra/i1/O1CN01sens5C1TuwioeGexL_!!6000000002443-55-tps-771-132.svg" alt="QwenPaw Logo" width="120">
 </p>
 
 <p align="center"><b>あなたのために働き、あなたとともに成長する。</b></p>
 
 </div>
 
-あなた専用のAIアシスタント。簡単にインストールでき、ローカルマシンやクラウドにデプロイ可能。複数のチャットアプリに対応し、機能を簡単に拡張できます。
+あなた専用の AI アシスタント — ローカルまたはクラウドに展開し、Skills & Plugins で拡張、あらゆるチャネルで接続。
 
-> **主な機能:**
->
-> **あらゆるチャネル** — DingTalk、Feishu、QQ、Discord、iMessageなど。1つのアシスタントで、必要に応じて接続。
->
-> **あなたの管理下** — メモリとパーソナライズはあなたの管理下に。ローカルまたはクラウドにデプロイ。任意のチャネルへのスケジュールリマインダー。
->
-> **スキル** — 組み込みのcron機能。ワークスペース内のカスタムスキルを自動読み込み。ロックインなし。
->
+| | |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **忘れない**                               | 3 層メモリ — ライブな作業コンテキスト、完全な逐語履歴、そして [ReMe](https://github.com/agentscope-ai/ReMe) による自己進化型パーソナルナレッジベース。会話と資料を、読み取り・編集・検索が可能で相互にリンクされた Markdown メモリへ継続的に変換。 |
+| **ローカルもクラウドも、自由に動く**        | QwenPaw-Flash モデル（2B / 4B / 9B）— エージェントタスク向けに訓練。内蔵 QwenPaw Local ランタイム — API キー不要、クラウド依存なし。Ollama、LM Studio、14+ クラウドプロバイダーにも対応。                  |
+| **セキュリティ内蔵**                         | カーネルレベルの Sandbox、Tool Guard、File Guard、Skill Scanner、Access Policy。危険なコマンドは実行前にブロック。                                                                                    |
+| **マルチエージェント＆並列**                | 独自のメモリとスキルを持つ独立エージェントを生成。実行時のサブエージェント。Agent Communication Protocol（ACP）によるクロスシステム編成。                                                                         |
+| **ファイルワークスペース**                     | プロジェクトと Agent のファイルに共通するナビゲーション、プレビュー、編集、Diff、アップロード、ダウンロード。                                                                      |
+| **拡張可能**                                | スケジューリング、ドキュメント、ブラウザ、ニュースなどの Skills。マーケット付きプラグインアーキテクチャ。MCP で外部ツールを統合。目的別ワークフローに自由に組み合わせ可能。                                                                    |
+| **どこでも届く**                        | DingTalk、Lark、WeChat、Discord、Telegram、iMessage、QQ — 1 インスタンス、全チャネル。Console、TUI、デスクトップアプリで直接アクセス。                                                                         |
+| **あなたのもの、私たちのものではない**          | ローカル展開 — データはあなたのマシンに留まる。サードパーティホスティングなし、データアップロードなし。                                                                                                         |
+
 > <details>
-> <summary><b>こんなことができます</b></summary>
+> <summary><b>QwenPaw でできること</b></summary>
 >
 > <br>
 >
-> - **ソーシャル**: 人気投稿のデイリーダイジェスト（小紅書、知乎、Reddit）、Bilibili/YouTubeの要約。
-> - **生産性**: ニュースレターのダイジェストをDingTalk/Feishu/QQに配信、メール/カレンダーからの連絡先管理。
-> - **クリエイティブ**: 目標を伝えて一晩実行、翌日にはドラフトが完成。
-> - **リサーチ**: テック/AIニュースの追跡、パーソナルナレッジベース。
-> - **デスクトップ**: ファイル整理、ドキュメントの読み取り/要約、チャットでファイルをリクエスト。
-> - **探索**: スキルとcronを組み合わせて、独自のエージェントアプリを構築。
+> - **自動化 & スケジューリング**: 定期タスクを設定 — ニュースダイジェスト、レポート生成、マルチチャネル配信 — すべてスケジュール通りに自動実行。
+> - **コード & 開発**: 統合ファイルワークスペースでプロジェクト内のコードを読み取り、編集、レビュー、テスト。
+> - **ドキュメント処理**: PDF、Word、Excel、PowerPoint の読み取り、書き込み、変換。
+> - **情報収集**: Web 検索、購読情報のフォロー、動画要約、個人ナレッジベースからの検索。
+> - **マルチチャネル運用**: DingTalk、Lark、Discord、Telegram などへアラート、要約、AI 生成コンテンツをプッシュ — 同時またはチャネル別。
+> - **カスタムワークフロー**: 組み込み機能、プラグイン、定期タスクを組み合わせて、自分に合ったワークフローを構築。
 >
 > </details>
 
@@ -54,92 +60,87 @@
 
 ## ニュース
 
-[2026-03-12] v0.0.7をリリースしました！詳細は[v0.0.7リリースノート](https://agentscope-ai.github.io/CoPaw/release-notes)でご確認ください。
+- [2026-09-10] **v2.2.1** | Creator 1.2 のブループリントワークベンチ、Agent ごとのモデルルーティング、統合環境管理。[v2.2.1 リリースノート →](https://qwenpaw.agentscope.io/release-notes#v2.2.1)
 
-- **[v0.0.7] 追加:** Tool Guardセキュリティレイヤー（危険なツール呼び出しをユーザー承認まで遮断）; MattermostとMatrixチャネル統合; Discord/DingTalk/Feishu/Telegramの@メンションフィルタリング; Telegram Markdownレンダリング; Feishu絵文字リアクションとリッチテキストメディア; QQ画像送信; LLM呼び出し自動リトライ; LM Studioプロバイダー; トークン使用量ダッシュボード; プロバイダー`generate_kwargs`エディタ; ワークスペースファイルのドラッグ＆ドロップ; チャット中のモデル切替; エージェント言語セレクター; コンテキスト管理UI; ページ遷移時のチャット状態保持; AIスキル最適化とストリーミング出力; スキルカード説明表示; 中国ユーザー向け自動PyPIミラー選択。
-- **[v0.0.7] 改善:** プロバイダー接続テストメッセージ; ワークスペースzip・セッション読取の非同期化; プロバイダーID競合の自動解決; モデル検出のオンデマンド化; トークン記録の集約; 組み込みスキルドキュメントとシェルPATH処理; Himalayaメールスキル; メモリドキュメント再構成; 設定・セキュリティページのリファクタリング。
-- **[v0.0.7] 修正:** DingTalk認証失敗時のクリーンアップ; Discord 2000文字超メッセージ分割; Matrix/Mattermost/MQTTチャネル設定の型整合; Windowsシェルエンコーディングとプロセスツリークリーンアップ; デスクトップSSL証明書・IME入力・外部URLナビゲーション; インストールスクリプトの関数定義順序修正; マジックコマンドセッション状態保護; Ollamaモーダル再レンダリング; `get_token_usage`データアクセス; チャットリクエストの重複排除。
-- **[v0.0.7] 貢献者:** 新規貢献者の皆さんに感謝します: [@2catycm](https://github.com/2catycm), [@2niuhe](https://github.com/2niuhe), [@yingdachen](https://github.com/yingdachen), [@Atletico1999](https://github.com/Atletico1999), [@buecker](https://github.com/buecker), [@Cirilla-zmh](https://github.com/Cirilla-zmh), [@gnipping](https://github.com/gnipping), [@Nufe-muzi](https://github.com/Nufe-muzi), [@FuKunZ](https://github.com/FuKunZ), [@JasonBuildAI](https://github.com/JasonBuildAI), [@StarMoonCity](https://github.com/StarMoonCity), [@walker83](https://github.com/walker83), [@lllcy](https://github.com/lllcy)。
+- [2026-09-03] **v2.2.0** | セルフホスト型マルチユーザー QwenPaw Hub、QwenPaw Mail、ネイティブ QwenPaw Data、統合モデルルーティング、Creator 1.1 に加え、マーケット、Console、Skills、チャネル、信頼性を大幅に改善。[v2.2.0 リリースノート →](https://qwenpaw.agentscope.io/release-notes#v2.2.0)
 
-[2026-03-09] v0.0.6をリリースしました！詳細は[v0.0.6リリースノート](https://agentscope-ai.github.io/CoPaw/release-notes)でご確認ください。
+- [2026-08-13] **v2.1.0** | QwenPaw OS Shell、統合 Files ワークスペース、QwenPaw Creator、Codex/Qoder エージェント連携、Browser-use、Computer-use、ワークスペースチェックポイント、長時間の対話タスク継続など。[v2.1.0 リリースノート →](https://qwenpaw.agentscope.io/release-notes#v2.1.0)
 
-[2026-03-06] v0.0.5をリリースしました！詳細は[v0.0.5リリースノート](https://agentscope-ai.github.io/CoPaw/release-notes)でご確認ください。
+- [2026-07-24] **v2.0.1** | PawApp ミニアプリプラットフォーム、ユーザー編集可能な Agent Mode、Oh-My-Paw plugins、[ReMe](https://github.com/agentscope-ai/ReMe) メモリ強化、デスクトップ UX 改善など。[v2.0.1 リリースノート →](https://qwenpaw.agentscope.io/release-notes#v2.0.1)
 
-[2026-03-02] v0.0.4をリリースしました！詳細は[v0.0.4リリースノート](https://agentscope-ai.github.io/CoPaw/release-notes)でご確認ください。
+- [2026-07-10] **v2.0.0 — QwenPaw 2.0 正式リリース** 🎉 | AgentScope 2.0 ベースの全面リライト：Agent OS アーキテクチャ、Loop Engineering、Scroll Context、[ReMe](https://github.com/agentscope-ai/ReMe) v0.4 自己進化型パーソナルナレッジベース、組み込み TUI を提供。
+
+  | ハイライト | 内容 |
+  |-----------|------|
+  | **Agent OS — Workspace** | エージェントごとの 3 本柱：**Resources**（透明なディスク保存）、**Governance**（allow/deny/ask/sandbox）、**Sandbox**（macOS / Linux / Windows）。 |
+  | **Agent OS — Drivers** | プロトコル中立な MCP / A2A / ACP コネクタ層、暗号化資格情報と呼び出しごとのポリシーゲート付き。 |
+  | **Loop Engineering** | 高度なエージェントループテンプレート（Coding Mode、Mission Mode、今後さらに追加予定）と組み合わせ可能な承認ゲート。 |
+  | **Scroll Context** | 全ターンを永続化；退去ターンはインデックス付きでオンデマンド再生 — 要約なし、情報欠落なし。 |
+  | **[ReMe](https://github.com/agentscope-ai/ReMe) v0.4 自己進化型パーソナルナレッジベース** | 会話と資料を、読み取り・編集・検索が可能で相互にリンクされた Markdown メモリへ継続的に変換。 |
+  | **Terminal UI (TUI)** | フルスクリーンターミナルチャット — Console やチャネルと同一のエージェント・記憶・セッション。 |
+
+  Agent OS をベースに、すぐに使える QwenPaw アプリケーション — **QwenPaw Creator**、**QwenPaw Insight** など — を順次リリース予定です。 [v2.0.0 リリースノート →](https://qwenpaw.agentscope.io/release-notes#v2.0.0)
+
+[すべてのリリースノート →](https://qwenpaw.agentscope.io/release-notes)
 
 ---
 
 ## 目次
 
-> **おすすめの読み方:**
->
-> - **3つのコマンドで実行したい**: [クイックスタート](#クイックスタート) → ブラウザでコンソールを開く。
-> - **DingTalk / Feishu / QQ でチャットしたい**: コンソールで[チャネル](https://copaw.agentscope.io/docs/channels)を設定。
-> - **Pythonをインストールしたくない**: [ワンラインインストール](#ワンラインインストールベータ版継続的に改善中)がPythonを自動処理。または[ModelScopeワンクリック](https://modelscope.cn/studios/fork?target=AgentScope/CoPaw)でクラウドデプロイ。
-
 - [ニュース](#ニュース)
 - [クイックスタート](#クイックスタート)
-- [APIキー](#apiキー)
+- [API キー](#api-キー)
 - [ローカルモデル](#ローカルモデル)
+- [セキュリティ機能](#セキュリティ機能)
 - [ドキュメント](#ドキュメント)
 - [FAQ](#faq)
 - [ロードマップ](#ロードマップ)
-- [参加方法](#参加方法)
+- [コントリビュート](#コントリビュート)
 - [ソースからインストール](#ソースからインストール)
-- [なぜCoPaw？](#なぜcopaw)
-- [開発チーム](#開発チーム)
+- [なぜ QwenPaw？](#なぜ-qwenpaw)
+- [開発元](#開発元)
 - [ライセンス](#ライセンス)
 
 ---
 
 ## クイックスタート
 
-### pip install（推奨）
+### オプション 1: Pip Install
 
-Pythonを自分で管理する場合:
+Python を自分で管理する場合（Python >= 3.11, < 3.14 が必要）:
 
 ```bash
-pip install copaw
-copaw init --defaults
-copaw app
+pip install qwenpaw
+qwenpaw init --defaults
+qwenpaw app
 ```
 
-ブラウザで **http://127.0.0.1:8088/** を開くとコンソール（CoPawとのチャット、エージェントの設定）が利用できます。DingTalk、Feishu、QQなどで会話するには、[チャネルドキュメント](https://copaw.agentscope.io/docs/channels)でチャネルを接続してください。
+ブラウザで **http://127.0.0.1:8088/** を開いてコンソールでモデルを設定します。DingTalk、Lark、WeChat などでチャットするには、[チャネル設定](https://qwenpaw.agentscope.io/docs/channels) ドキュメントを参照してください。
 
-![Console](https://img.alicdn.com/imgextra/i3/O1CN01VYsFVo23aAvIM3GXB_!!6000000007271-2-tps-3328-1860.png)
+![Console](https://img.alicdn.com/imgextra/i2/O1CN01EP1ra01iOAcBvF0TC_!!6000000004402-2-tps-3822-2070.png)
 
-### ワンラインインストール（ベータ版、継続的に改善中）
+---
 
-Pythonは不要です — インストーラーがすべて自動で処理します:
+### オプション 2: Script Install
+
+Python 環境の手動設定は不要。1 つのコマンドで自動的にすべてをインストール。スクリプトは uv（Python パッケージマネージャー）のダウンロード、仮想環境の作成、QwenPaw と全依存関係（Node.js とフロントエンドアセットを含む）のインストールを自動的に行います。注：一部のネットワーク環境や企業の権限管理下では使用できない場合があります。
 
 **macOS / Linux:**
 
 ```bash
-curl -fsSL https://copaw.agentscope.io/install.sh | bash
-```
-
-Ollamaサポート付きでインストールする場合:
-
-```bash
-curl -fsSL https://copaw.agentscope.io/install.sh | bash -s -- --extras ollama
-```
-
-複数のエクストラ（例: Ollama + llama.cpp）付きでインストールする場合:
-
-```bash
-curl -fsSL https://copaw.agentscope.io/install.sh | bash -s -- --extras ollama,llamacpp
+curl -fsSL https://qwenpaw.agentscope.io/install.sh | bash
 ```
 
 **Windows (CMD):**
 
 ```CMD
-curl -fsSL https://copaw.agentscope.io/install.bat -o install.bat && install.bat
+curl -fsSL https://qwenpaw.agentscope.io/install.bat -o install.bat && install.bat
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-irm https://copaw.agentscope.io/install.ps1 | iex
+irm https://qwenpaw.agentscope.io/install.ps1 | iex
 ```
 
 > **注意**: インストーラーは uv の状態を自動的に確認します。未インストールの場合はダウンロードと設定を試みます。自動インストールに失敗した場合は、画面の指示に従うか、`python -m pip install -U uv` を実行してからインストーラーを再実行してください。
@@ -147,31 +148,31 @@ irm https://copaw.agentscope.io/install.ps1 | iex
 > **⚠️ Windows Enterprise LTSC ユーザーへの重要なお知らせ**
 >
 > Windows LTSC または厳格なセキュリティポリシーが適用された企業環境をご利用の場合、PowerShell は **制限付き言語モード** で実行される可能性があり、以下の問題が発生する可能性があります：
-> 1. **CMD（.bat）使用時：スクリプトは正常に実行されるが`Path`への書き込みができない**
+> 1. **CMD（.bat）使用時：スクリプトは正常に実行されるが `Path` への書き込みができない**
 >
->    スクリプトはファイルインストールを完了しましたが、**制限付き言語モード**のため環境変数への自動書き込みができません。この場合、手動で設定してください：
+>    スクリプトはファイルインストールを完了しましたが、**制限付き言語モード** のため環境変数への自動書き込みができません。この場合、手動で設定してください：
 >    - **インストールディレクトリを確認**：
->      - `uv` の利用可否を確認：CMD で `uv --version` と入力し、バージョン番号が表示された場合は**CoPaw パスのみ設定**。`『uv』 は内部コマンドでも外部コマンドでもなく、実行可能プログラムまたはバッチファイルでもありません。` と表示された場合は両方を設定する必要があります。
->      - uvパス（いずれか一つ、インストール場所に応じて選択。`uv`が利用不可の場合に記入）：通常`%USERPROFILE%\.local\bin`、`%USERPROFILE%\AppData\Local\uv`、またはPythonインストールディレクトリの`Scripts`フォルダ
->      - CoPawパス：通常 `%USERPROFILE%\.copaw\bin` にあります。
->    - **システム環境変数Pathへの手動追加**：
+>      - `uv` の利用可否を確認：CMD で `uv --version` と入力し、バージョン番号が表示された場合は **QwenPaw パスのみ設定**。`『uv』 は内部コマンドでも外部コマンドでもなく、実行可能プログラムまたはバッチファイルでもありません。` と表示された場合は両方を設定する必要があります。
+>      - uv パス（いずれか一つ、インストール場所に応じて選択。`uv` が利用不可の場合に記入）：通常 `%USERPROFILE%\.local\bin`、`%USERPROFILE%\AppData\Local\uv`、または Python インストールディレクトリの `Scripts` フォルダ
+>      - QwenPaw パス：通常 `%USERPROFILE%\.qwenpaw\bin` にあります。
+>    - **システム環境変数 Path への手動追加**：
 >      - `Win + R` を押し、`sysdm.cpl` と入力して Enter キーを押し、「システムのプロパティ」を開く。
 >      - 「詳細設定」→「環境変数」をクリック。
 >      - 「システム変数」で `Path` を探して選択し、「編集」をクリック。
->      - 「新規」をクリックし、上記の2つのディレクトリパスを順に入力して「OK」をクリックし保存します。
+>      - 「新規」をクリックし、上記の 2 つのディレクトリパスを順に入力して「OK」をクリックし保存します。
 > 2. **PowerShell（.ps1）を使用している場合：スクリプト実行が中断する**
 >
->   **制限付き言語モード** のため、スクリプトが自動的に`uv`をダウンロードできない可能性があります。
->   - **uvを手動でインストール**： [GitHub Release](https://github.com/astral-sh/uv/releases) を参照し、`uv.exe` を `%USERPROFILE%\.local\bin` または `%USERPROFILE%\AppData\Local\uv` に配置。または Python がインストールされていることを確認し、`python -m pip install -U uv` を実行。
->   - **`uv`環境変数の設定**：`uv`の配置ディレクトリと `%USERPROFILE%\.copaw\bin` をシステムの `Path` 変数に追加してください。
->   - **再実行**：新しいターミナルを開き、インストールスクリプトを再度実行して `CoPaw` のインストールを完了させてください。
->   - **`CoPaw`環境変数の設定**：`%USERPROFILE%\.copaw\bin` をシステムの `Path` 変数に追加します。
+>   **制限付き言語モード** のため、スクリプトが自動的に `uv` をダウンロードできない可能性があります。
+>   - **uv を手動でインストール**： [GitHub Release](https://github.com/astral-sh/uv/releases) を参照し、`uv.exe` を `%USERPROFILE%\.local\bin` または `%USERPROFILE%\AppData\Local\uv` に配置。または Python がインストールされていることを確認し、`python -m pip install -U uv` を実行。
+>   - **`uv` 環境変数の設定**：`uv` の配置ディレクトリと `%USERPROFILE%\.qwenpaw\bin` をシステムの `Path` 変数に追加してください。
+>   - **再実行**：新しいターミナルを開き、インストールスクリプトを再度実行して `QwenPaw` のインストールを完了させてください。
+>   - **`QwenPaw` 環境変数の設定**：`%USERPROFILE%\.qwenpaw\bin` をシステムの `Path` 変数に追加します。
 
 インストール完了後、新しいターミナルを開き、以下を実行してください：
 
 ```bash
-copaw init --defaults   # または: copaw init（対話式）
-copaw app
+qwenpaw init --defaults   # または: qwenpaw init（対話式）
+qwenpaw app
 ```
 
 <details>
@@ -181,277 +182,330 @@ copaw app
 
 ```bash
 # 特定のバージョンをインストール
-curl -fsSL ... | bash -s -- --version 0.0.2
+curl -fsSL ... | bash -s -- --version 1.1.0
 
 # ソースからインストール（開発/テスト用）
 curl -fsSL ... | bash -s -- --from-source
-
-# ローカルモデルサポート付き
-bash install.sh --extras llamacpp    # llama.cpp（クロスプラットフォーム）
-bash install.sh --extras mlx         # MLX（Apple Silicon）
-bash install.sh --extras llamacpp,mlx
 
 # アップグレード — インストーラーを再実行するだけ
 curl -fsSL ... | bash
 
 # アンインストール
-copaw uninstall          # 設定とデータを保持
-copaw uninstall --purge  # すべて削除
+qwenpaw uninstall          # 設定とデータを保持
+qwenpaw uninstall --purge  # すべて削除
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
 # 特定のバージョンをインストール
-irm ... | iex; .\install.ps1 -Version 0.0.2
+irm ... | iex; .\install.ps1 -Version 1.1.12
 
 # ソースからインストール（開発/テスト用）
 .\install.ps1 -FromSource
-
-# ローカルモデルサポート付き
-.\install.ps1 -Extras llamacpp      # llama.cpp（クロスプラットフォーム）
-.\install.ps1 -Extras mlx           # MLX
-.\install.ps1 -Extras llamacpp,mlx
 
 # アップグレード — インストーラーを再実行するだけ
 irm ... | iex
 
 # アンインストール
-copaw uninstall          # 設定とデータを保持
-copaw uninstall --purge  # すべて削除
+qwenpaw uninstall          # 設定とデータを保持
+qwenpaw uninstall --purge  # すべて削除
 ```
 
 </details>
 
-### デスクトップアプリケーション（Beta）
 
-> **Beta版の注意事項**: デスクトップアプリケーションは現在Beta版テスト段階にあり、以下の既知の制限があります：
+---
+
+### オプション 3: Docker
+
+イメージは **Docker Hub**（`agentscope/qwenpaw`）で公開しています。タグ: `latest`（安定版）; `pre`（PyPI プレリリース版）。
+
+```bash
+docker pull agentscope/qwenpaw:latest
+docker run -p 127.0.0.1:8088:8088 \
+  -v qwenpaw-data:/app/working \
+  -v qwenpaw-secrets:/app/working.secret \
+  -v qwenpaw-backups:/app/working.backups \
+  agentscope/qwenpaw:latest
+```
+
+中国のユーザーは阿里雲コンテナレジストリ（ACR）も利用できます: `agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/qwenpaw`（タグは同じ）。
+
+ブラウザで **http://127.0.0.1:8088/** を開くとコンソールが利用できます。設定、メモリ、スキルは `qwenpaw-data` ボリュームに保存されます。モデル設定と API キーは `qwenpaw-secrets` ボリュームに保存されます。バックアップアーカイブは `qwenpaw-backups` ボリュームに保存されます。API キー（例: `DASHSCOPE_API_KEY`）を渡すには、`docker run` に `-e VAR=value` または `--env-file .env` を追加してください。
+
+> **ホストマシン上の Ollama や他のモデルサービスに接続する**
+>
+> Docker コンテナ内の `localhost` はコンテナ自身を指し、ホストマシンではありません。Ollama（または他のモデルサービス）がホスト上で動作している場合、以下のいずれかの方法で QwenPaw コンテナからアクセスできます：
+>
+> **方法 A** — ホストアドレスの明示的バインディング（全プラットフォーム対応）：
+> ```bash
+> docker run -p 127.0.0.1:8088:8088 \
+>   --add-host=host.docker.internal:host-gateway \
+>   -v qwenpaw-data:/app/working \
+>   -v qwenpaw-secrets:/app/working.secret \
+>   -v qwenpaw-backups:/app/working.backups \
+>   agentscope/qwenpaw:latest
+> ```
+> その後、QwenPaw の **設定 → モデル** で、Base URL を `http://host.docker.internal:<ポート>` に変更してください — 例えば、Ollama の場合は `http://host.docker.internal:11434`、LM Studio の場合は `http://host.docker.internal:1234/v1` とします。
+>
+> **方法 B** — ホストネットワーク（Linux のみ）：
+> ```bash
+> docker run --network=host \
+>   -v qwenpaw-data:/app/working \
+>   -v qwenpaw-secrets:/app/working.secret \
+>   -v qwenpaw-backups:/app/working.backups \
+>   agentscope/qwenpaw:latest
+> ```
+> ポートマッピング（`-p`）は不要で、コンテナはホストネットワークを直接共有します。ただし、コンテナの全ポートがホスト上に公開されるため、使用中のポートと競合する可能性があります。
+>
+
+イメージはゼロからビルドされています。自分でイメージをビルドする場合は、`scripts/README.md` の [Build Docker image](scripts/README.md#build-docker-image) セクションを参照し、レジストリにプッシュしてください。
+
+---
+
+### オプション 4: Alibaba Cloud ECS へのデプロイ
+
+QwenPaw を Alibaba Cloud（ECS）で実行するには、ワンクリックデプロイを使用します: [QwenPaw on Alibaba Cloud (ECS) デプロイリンク](https://computenest.console.aliyun.com/service/instance/create/cn-hangzhou?type=user&ServiceId=service-1ed84201799f40879884) を開き、プロンプトに従ってください。ステップバイステップの手順については、[Alibaba Cloud Developer: 3 分で AI アシスタントをデプロイ](https://developer.aliyun.com/article/1713682) を参照してください。
+
+---
+
+### オプション 5: AgentScope Platform
+
+[AgentScope Platform](https://platform.agentscope.io/) でワンクリックのクラウド QwenPaw デプロイ、プラグイン共有、Skill マーケットに対応。無料、7/24 オンライン。
+
+---
+
+### オプション 6: ModelScope を使用
+
+[ModelScope Studio](https://modelscope.cn/studios/fork?target=AgentScope/QwenPaw) でもクラウド QwenPaw デプロイに対応。注意：他の人があなたの QwenPaw を操作できないよう、Studio を **非公開** に設定してください。
+
+---
+
+### オプション 7: Desktop Application (Beta)
+
+> **Beta 版の注意事項**: デスクトップアプリケーションは現在 Beta 版テスト段階にあり、以下の既知の制限があります：
 > - **互換性テストが不完全**: すべてのシステムバージョンとハードウェア構成で十分にテストされていません
 > - **パフォーマンスの問題の可能性**: 起動時間、メモリ使用量などのパフォーマンス面でさらなる最適化が必要な場合があります
 > - **開発中の機能**: 一部の機能が不安定または欠落している可能性があります
 
-コマンドラインツールに慣れていない場合、CoPawのデスクトップアプリケーションをダウンロードして使用できます。Python環境の手動設定やコマンドの実行は不要です。
+コマンドラインツールに慣れていない場合、QwenPaw のデスクトップアプリケーションをダウンロードして使用できます。Python 環境の手動設定やコマンドの実行は不要です。
 
 #### ダウンロード
 
-[GitHub Releases](https://github.com/agentscope-ai/CoPaw/releases)からデスクトップアプリをダウンロード:
-- **Windows**: `CoPaw-Setup-<version>.exe`
-- **macOS**: `CoPaw-<version>-macOS.zip` (Apple Silicon推奨)
+[公式ダウンロードページ](https://qwenpaw.agentscope.io/downloads) からデスクトップアプリ（Tauri 版）をダウンロード:
+- **Windows**: `QwenPaw-Tauri-<version>-Windows-setup.exe`
+- **macOS**: `QwenPaw-Tauri-<version>-macOS.zip` (Apple Silicon 推奨)
 
 #### 特徴
 
-- ✅ **ゼロ設定**: ダウンロードしてダブルクリックするだけで実行可能、Pythonのインストールや環境変数の設定は不要
+- ✅ **ゼロ設定**: ダウンロードしてダブルクリックするだけで実行可能、Python のインストールや環境変数の設定は不要
 - ✅ **クロスプラットフォーム**: Windows 10+ と macOS 14+ に対応
-- ✅ **ビジュアルインターフェース**: ブラウザインターフェースが自動的に開き、手動でアドレスを入力する必要はありません
-- ⚠️ **Beta段階**: 機能は継続的に改善中、フィードバックを歓迎します
+- ✅ **ビジュアルインターフェース**: アプリのウィンドウが自動的に開き、手動でアドレスを入力する必要はありません
+- ⚠️ **Beta 段階**: 機能は継続的に改善中、フィードバックを歓迎します
 
 #### 初回起動
 
-**重要**: 初回起動には10〜60秒かかる場合があります（システム構成によります）。アプリケーションはPython環境の初期化と依存関係の読み込みが必要です。ブラウザウィンドウが自動的に開くまでお待ちください。
+**重要**: 初回起動には 10〜60 秒かかる場合があります（システム構成によります）。アプリケーションは Python 環境の初期化と依存関係の読み込みが必要です。ウィンドウが自動的に開くまでお待ちください。
 
 #### macOS: システムセキュリティ制限の回避
 
-ReleasesからCoPaw macOSアプリをダウンロードすると、macOSは次のように表示する場合があります: *「Appleは'CoPaw'に悪意のあるソフトウェアが含まれていないことを確認できません」*。これはアプリが公証されていないためです。以下の方法で開くことができます:
+Releases から QwenPaw macOS アプリをダウンロードすると、macOS は次のように表示する場合があります: *「Apple は 'QwenPaw' に悪意のあるソフトウェアが含まれていないことを確認できません」*。これはアプリが公証されていないためです。以下の方法で開くことができます:
 
 - **右クリックして開く（推奨）**
-  CoPawアプリを右クリック（またはControl+クリック）→ **「開く」** → ダイアログで再度 **「開く」** をクリック。これによりGatekeeperにアプリを信頼していることを伝えます。その後は通常通りダブルクリックで起動できます。
+  QwenPaw アプリを右クリック（または Control+クリック）→ **「開く」** → ダイアログで再度 **「開く」** をクリック。これにより Gatekeeper にアプリを信頼していることを伝えます。その後は通常通りダブルクリックで起動できます。
 
 - **システム設定で許可**
-  それでもブロックされる場合、**システム設定 → プライバシーとセキュリティ** に移動し、*「'CoPaw'は未確認の開発元からのものであるためブロックされました」* のようなメッセージまでスクロールし、**「このまま開く」** または **「許可」** をクリックします。
+  それでもブロックされる場合、**システム設定 → プライバシーとセキュリティ** に移動し、*「'QwenPaw' は未確認の開発元からのものであるためブロックされました」* のようなメッセージまでスクロールし、**「このまま開く」** または **「許可」** をクリックします。
 
 - **検疫属性の削除（ほとんどのユーザーには非推奨）**
   ターミナルで実行:
-  `xattr -cr /Applications/CoPaw.app`
+  `xattr -cr "/Applications/QwenPaw Desktop.app"`
   （または解凍後の `.app` へのパスを使用）。これにより「インターネットからダウンロードされた」検疫フラグがクリアされ、通常は警告が表示されなくなりますが、**右クリック → 開く** を使用するよりも安全性と制御性が低くなります。
 
-詳細な使用方法、トラブルシューティング、よくある問題については、[デスクトップアプリケーションガイド](https://copaw.agentscope.io/docs/desktop)を参照してください。
-
-### Dockerを使用
-
-イメージは **Docker Hub**（`agentscope/copaw`）で公開しています。タグ: `latest`（安定版）; `pre`（PyPIプレリリース版）。
-
-```bash
-docker pull agentscope/copaw:latest
-docker run -p 127.0.0.1:8088:8088 \
-  -v copaw-data:/app/working \
-  -v copaw-secrets:/app/working.secret \
-  agentscope/copaw:latest
-```
-
-中国のユーザーは阿里雲コンテナレジストリ（ACR）も利用できます: `agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/copaw`（タグは同じ）。
-
-ブラウザで **http://127.0.0.1:8088/** を開くとコンソールが利用できます。設定、メモリ、スキルは `copaw-data` ボリュームに保存されます。モデル設定とAPIキーは `copaw-secrets` ボリュームに保存されます。APIキー（例: `DASHSCOPE_API_KEY`）を渡すには、`docker run` に `-e VAR=value` または `--env-file .env` を追加してください。
-
-> **ホストマシン上のOllamaや他のモデルサービスに接続する**
->
-> Dockerコンテナ内の `localhost` はコンテナ自身を指し、ホストマシンではありません。Ollama（または他のモデルサービス）がホスト上で動作している場合、以下のいずれかの方法でCoPawコンテナからアクセスできます：
->
-> **方法A** — ホストアドレスの明示的バインディング（全プラットフォーム対応）：
-> ```bash
-> docker run -p 127.0.0.1:8088:8088 \
->   --add-host=host.docker.internal:host-gateway \
->   -v copaw-data:/app/working \
->   -v copaw-secrets:/app/working.secret \
->   agentscope/copaw:latest
-> ```
-> その後、CoPawの **Settings → Models → Ollama** で、Base URLを `http://host.docker.internal:11434` または対応するポートに変更してください。
->
-> **方法B** — ホストネットワーク（Linuxのみ）：
-> ```bash
-> docker run --network=host \
->   -v copaw-data:/app/working \
->   -v copaw-secrets:/app/working.secret \
->   agentscope/copaw:latest
-> ```
-> ポートマッピング（`-p`）は不要で、コンテナはホストネットワークを直接共有します。ただし、コンテナの全ポートがホスト上に公開されるため、使用中のポートと競合する可能性があります。
->
-> **ヒント：** `/app/working` のみをマウントし `/app/working.secret` を別途マウントしない場合、エントリポイントスクリプトが自動的にsecretsを `/app/working/.secret` にリダイレクトし、同じボリュームに永続化します。
-
-イメージはゼロからビルドされています。自分でイメージをビルドする場合は、`scripts/README.md` の [Build Docker image](scripts/README.md#build-docker-image) セクションを参照し、レジストリにプッシュしてください。
-
-### ModelScopeを使用
-
-**ローカルインストール不要？** [ModelScope Studio](https://modelscope.cn/studios/fork?target=AgentScope/CoPaw) でワンクリッククラウドセットアップ。他の人があなたのCoPawを操作できないよう、Studioを**非公開**に設定してください。
-
-### Alibaba Cloud ECSへのデプロイ
-
-CoPawをAlibaba Cloud（ECS）で実行するには、ワンクリックデプロイを使用します: [CoPaw on Alibaba Cloud (ECS) デプロイリンク](https://computenest.console.aliyun.com/service/instance/create/cn-hangzhou?type=user&ServiceId=service-1ed84201799f40879884)を開き、プロンプトに従ってください。ステップバイステップの手順については、[Alibaba Cloud Developer: 3分でAIアシスタントをデプロイ](https://developer.aliyun.com/article/1713682)を参照してください。
+詳細な使用方法、トラブルシューティング、よくある問題については、[デスクトップアプリケーションガイド](https://qwenpaw.agentscope.io/docs/desktop) を参照してください。
 
 ---
 
-## APIキー
+### 次は何をする？
 
-**クラウドLLM**（例: DashScope、ModelScope）を使用する場合、チャットの前にAPIキーを設定する必要があります。有効なキーが設定されるまでCoPawは動作しません。詳細は[公式ドキュメント](https://copaw.agentscope.io/docs/models#configure-cloud-providers)をご覧ください。
+インストール後、**コンソール → 設定 → モデル** でモデルを設定し、以下を探索してください：
+
+- [スキルを追加](https://qwenpaw.agentscope.io/docs/skills) して機能を拡張（PDF、Office、ブラウザ、ニュースなど）
+- [チャネルを設定](https://qwenpaw.agentscope.io/docs/channels) して DingTalk、Lark、Discord などに接続
+- [Cron を設定](https://qwenpaw.agentscope.io/docs/cron) してスケジュールタスクと自動化を実現
+- すべてのオプションと検証手順については、[クイックスタートガイド](https://qwenpaw.agentscope.io/docs/quickstart) を参照
+
+---
+
+## ターミナル UI（TUI）
+
+ターミナルで完結したい場合、`qwenpaw` を実行するとフルスクリーンのチャット **TUI** が開きます。コンソールや IM チャネルと **同じ** エージェントを駆動 — 同じメモリ、スキル、MCP ツール、セッション — キーボードから離れずに操作できます。
+
+```bash
+qwenpaw                     # アクティブなエージェントでチャットを開く
+qwenpaw tui --resume <id>   # 以前のセッションを再開
+qwenpaw .                   # 現在のリポジトリで開始（Coding Mode）
+```
+
+ストリーミング応答、スラッシュコマンド（`/help`、`/resume`、`/theme`、エージェント独自の `/model`、`/clear` など）、ファイル/長文の貼り付け添付、インラインツール権限プロンプトに対応。詳細は [ターミナル UI ガイド](https://qwenpaw.agentscope.io/docs/tui) を参照してください。
+
+![QwenPaw TUI](https://img.alicdn.com/imgextra/i2/O1CN01IULzib1TRAzigIcqG_!!6000000002378-2-tps-2350-1312.png)
+
+---
+
+## API キー
+
+**クラウド LLM API**（例: DashScope / Qwen、OpenAI、Anthropic、Google Gemini、DeepSeek、Kimi、OpenRouter など）を使用する場合、チャットの前に API キーを設定する必要があります。有効なキーが設定されるまで QwenPaw は動作しません。詳細は [公式ドキュメント](https://qwenpaw.agentscope.io/docs/models) をご覧ください。
 
 **設定方法:**
 
-1. **コンソール（推奨）** — `copaw app` 実行後、**http://127.0.0.1:8088/** を開き → **設定** → **モデル**。プロバイダーを選択し、**APIキー**を入力して、そのプロバイダーとモデルを有効にしてください。
-2. **`copaw init`** — `copaw init` を実行すると、LLMプロバイダーとAPIキーの設定が案内されます。プロンプトに従ってプロバイダーを選択し、キーを入力してください。
-3. **環境変数** — DashScopeの場合、シェルまたはワーキングディレクトリの `.env` ファイルで `DASHSCOPE_API_KEY` を設定できます。
+1. **コンソール（推奨）** — `qwenpaw app` 実行後、**http://127.0.0.1:8088/** を開き → **設定** → **モデル**。プロバイダーを選択し、**API キー** を入力して、そのプロバイダーとモデルを有効にしてください。
+2. **`qwenpaw init`** — `qwenpaw init` を実行すると、LLM プロバイダーと API キーの設定が案内されます。プロンプトに従ってプロバイダーを選択し、キーを入力してください。
+3. **環境変数** — DashScope の場合、シェルまたはワーキングディレクトリの `.env` ファイルで `DASHSCOPE_API_KEY` を設定できます。
 
-その他のキー（例: Web検索用 `TAVILY_API_KEY`）は、コンソールの **設定 → 環境変数** で設定するか、[Config](https://copaw.agentscope.io/docs/config) で詳細を確認してください。
+その他のキー（例: Web 検索用 `TAVILY_API_KEY`）は、コンソールの **設定 → 環境変数** で設定できます。詳細は [Config](https://qwenpaw.agentscope.io/docs/config) を確認してください。
 
-> **ローカルモデルのみ使用する場合:** [ローカルモデル](#ローカルモデル)（llama.cppまたはMLX）を使用する場合、APIキーは**不要**です。
+> **ローカルモデルのみ使用する場合:** [ローカルモデル](#ローカルモデル)（QwenPaw Local / Ollama / LM Studio）を使用する場合、API キーは **不要** です。
 
 ## ローカルモデル
 
-CoPawはLLMを完全にローカルマシン上で実行できます — APIキーやクラウドサービスは不要です。詳細は[公式ドキュメント](https://copaw.agentscope.io/docs/models#local-providers-llamacpp--mlx)をご覧ください。
+QwenPaw は LLM を完全にローカルマシン上で実行できます — API キーやクラウドサービスは不要です。詳細は [公式ドキュメント](https://qwenpaw.agentscope.io/docs/models) をご覧ください。
 
-| バックエンド       | 最適な用途                                 | インストール                                                              |
-| ------------- | ---------------------------------------- | -------------------------------------------------------------------- |
-| **llama.cpp** | クロスプラットフォーム（macOS / Linux / Windows） | `pip install 'copaw[llamacpp]'` または `bash install.sh --extras llamacpp` |
-| **MLX**       | Apple Silicon（M1/M2/M3/M4）             | `pip install 'copaw[mlx]'` または `bash install.sh --extras mlx`         |
-| **Ollama**    | クロスプラットフォーム（Ollamaサービスが必要） | `pip install 'copaw[ollama]'` または `bash install.sh --extras ollama`   |
+QwenPaw は **QwenPaw-Flash** シリーズも提供 — エージェントシナリオ向けに目的訓練された 2B / 4B / 9B モデル、Q4 と Q8 量子化に対応。[ModelScope](https://www.modelscope.cn/organization/AgentScope?tab=model) と [Hugging Face](https://huggingface.co/agentscope-ai/models) で入手可能。
 
-インストール後、**コンソール**UIでローカルモデルのダウンロードと管理ができます。コマンドラインでも利用できます:
+| バックエンド              | 最適な用途                                 | インストール                                                              |
+| -------------------- | ---------------------------------------- | -------------------------------------------------------------------- |
+| **QwenPaw Local** (llama.cpp) | クロスプラットフォーム（macOS / Linux / Windows） | 内蔵；Web UI で「Download」をクリック。QwenPaw-Flash に対応、ハードウェアに応じた推奨あり。 |
+| **Ollama**           | クロスプラットフォーム（Ollama サービスが必要） | Ollama をインストールして起動；コンテキスト長 ≥ 32k を設定。 |
+| **LM Studio**        | クロスプラットフォーム（LM Studio が必要）      | LM Studio をインストールして起動；Local Server を有効化。 |
 
-```bash
-copaw models download Qwen/Qwen3-4B-GGUF
-copaw models # ダウンロードしたモデルを選択
-copaw app    # サーバーを起動
-```
+---
+
+## セキュリティ機能
+
+QwenPaw には 5 つのコアセキュリティレイヤーが含まれています：
+
+- **Sandbox** — macOS では Seatbelt、Linux では Bubblewrap / Landlock、Windows では AppContainer によるカーネルレベルの実行分離。シェルコマンドは制限されたファイルシステムビュー内で実行されます。
+- **Tool Guard** — YAML ルールエンジンと `ShellEvasionGuardian` が実行前にすべてのツール呼び出しを検査し、コマンドインジェクション、パストラバーサル、リバースシェル、難読化攻撃を検出。承認レベル設定可能：STRICT / SMART / AUTO / OFF。
+- **File Guard** — Tool Guard とは独立；エージェントの機密ファイル・ディレクトリへのアクセスをブロック（デフォルトで `~/.qwenpaw.secret/`、`~/.ssh` などを保護）。
+- **Skill Scanner** — block / warn / off モードとホワイトリスト対応の事前アクティベーションスキャン。プロンプトインジェクション、ハードコードされた秘密情報、データ流出などを検出。
+- **Access Policy** — 宣言型アクセスポリシー：各機能呼び出しに対し許可(allow)、拒否(deny)、または承認要求(ask)を裁定。ツールレベルの粒度とリクエスト元に応じたマッチングに対応。
+詳細は [セキュリティ](https://qwenpaw.agentscope.io/docs/security) を参照してください。
 
 ---
 
 ## ドキュメント
 
-| トピック                                                                 | 説明                                                |
-| ------------------------------------------------------------------------- | --------------------------------------------------- |
-| [はじめに](https://copaw.agentscope.io/docs/intro)                        | CoPawとは何か、使い方                               |
-| [クイックスタート](https://copaw.agentscope.io/docs/quickstart)          | インストールと実行（ローカルまたはModelScope Studio） |
-| [コンソール](https://copaw.agentscope.io/docs/console)                     | Web UI: チャットとエージェント設定                  |
-| [モデル](https://copaw.agentscope.io/docs/models)                         | クラウド・ローカル・カスタムプロバイダーの設定       |
-| [チャネル](https://copaw.agentscope.io/docs/channels)                      | DingTalk、Feishu、QQ、Discord、iMessageなど         |
-| [スキル](https://copaw.agentscope.io/docs/skills)                          | 機能の拡張とカスタマイズ                             |
-| [MCP](https://copaw.agentscope.io/docs/mcp)                                | MCPクライアントの管理                               |
-| [メモリ](https://copaw.agentscope.io/docs/memory)                          | 長期記憶                              |
-| [コンテキスト](https://copaw.agentscope.io/docs/context)                  | コンテキスト管理メカニズム                          |
-| [魔法コマンド](https://copaw.agentscope.io/docs/commands)                 | AIの応答を待たずに会話状態を制御                     |
-| [ハートビート](https://copaw.agentscope.io/docs/heartbeat)                 | スケジュールされたチェックインとダイジェスト        |
-| [設定とワーキングディレクトリ](https://copaw.agentscope.io/docs/config)   | ワーキングディレクトリと設定ファイル                 |
-| [CLI](https://copaw.agentscope.io/docs/cli)                                | Init、cronジョブ、スキル、クリーン                   |
-| [FAQ](https://copaw.agentscope.io/docs/faq)                               | よくある質問とトラブルシューティング                 |
+| トピック                                                                 | 説明                                      |
+| --------------------------------------------------------------------- | ------------------------------------------------ |
+| [はじめに](https://qwenpaw.agentscope.io/docs/intro)                | QwenPaw とは何か、使い方                  |
+| [クイックスタート](https://qwenpaw.agentscope.io/docs/quickstart)            | インストールと実行（ローカルまたは ModelScope Studio）    |
+| [コンソール](https://qwenpaw.agentscope.io/docs/console)                   | Web UI: チャットとエージェント設定            |
+| [ターミナル UI（TUI）](https://qwenpaw.agentscope.io/docs/tui)             | フルスクリーンターミナルチャット、コンソールと同じエージェント |
+| [デスクトップアプリ](https://qwenpaw.agentscope.io/docs/desktop)               | デスクトップアプリケーションのインストールと使用方法       |
+| [モデル](https://qwenpaw.agentscope.io/docs/models)                     | クラウド、ローカル、カスタムプロバイダーの設定    |
+| [チャネル](https://qwenpaw.agentscope.io/docs/channels)                  | DingTalk、Lark、QQ、Discord、iMessage など |
+| [スキル](https://qwenpaw.agentscope.io/docs/skills)                      | 機能の拡張とカスタマイズ               |
+| [プラグイン](https://qwenpaw.agentscope.io/docs/plugins)                    | プラグインシステムと Plugin Market                  |
+| [MCP](https://qwenpaw.agentscope.io/docs/mcp)                            | MCP クライアントの管理                               |
+| [Persona](https://qwenpaw.agentscope.io/docs/persona)                   | エージェントのパーソナリティカスタマイズ（SOUL / PROFILE）  |
+| [メモリ](https://qwenpaw.agentscope.io/docs/memory)                     | ローカルで編集・検索可能かつ相互にリンクされた Markdown メモリによる自己進化型パーソナルナレッジベース。[ReMe](https://github.com/agentscope-ai/ReMe) を採用 |
+| [ReMe ドキュメント](https://docs.agentscope.io/reme/latest/en/overview) | ReMe の公式概要とドキュメント                    |
+| [記憶進化 & プロアクティブ](https://qwenpaw.agentscope.io/docs/memory-evolving-and-proactive) | エージェントの記憶進化とプロアクティブインタラクション |
+| [コンテキスト](https://qwenpaw.agentscope.io/docs/context)                   | Scroll ベースのコンテキスト管理                  |
+| [魔法コマンド](https://qwenpaw.agentscope.io/docs/commands)           | AI の応答を待たずに会話状態を制御 |
+| [ハートビート](https://qwenpaw.agentscope.io/docs/heartbeat)                | スケジュールされたチェックインとダイジェスト                    |
+| [Cron / スケジュールタスク](https://qwenpaw.agentscope.io/docs/cron)       | スケジュールタスクと自動化                   |
+| [マルチエージェント](https://qwenpaw.agentscope.io/docs/multi-agent)           | 複数エージェントの作成と協調の有効化  |
+| [セキュリティ](https://qwenpaw.agentscope.io/docs/security)               | Sandbox、Tool Guard、File Guard、Skill Scanner、Access Policy |
+| [バックアップ & 復元](https://qwenpaw.agentscope.io/docs/backup)           | データバックアップと復旧                         |
+| [設定 & ワーキングディレクトリ](https://qwenpaw.agentscope.io/docs/config) | ワーキングディレクトリと設定ファイル                |
+| [REST API](https://qwenpaw.agentscope.io/docs/api-tutorial)             | 統合と自動化のための HTTP API          |
+| [ACP 連携](https://qwenpaw.agentscope.io/docs/acp-integration)   | Agent Communication Protocol 連携         |
+| [CLI](https://qwenpaw.agentscope.io/docs/cli)                            | Init、cron ジョブ、スキル、クリーン                   |
+| [エージェントチーム実践](https://qwenpaw.agentscope.io/docs/practice-agent-team) | マルチエージェントチームのデプロイガイド           |
+| [FAQ](https://qwenpaw.agentscope.io/docs/faq)                           | よくある質問とトラブルシューティング             |
 
-リポジトリ内の完全なドキュメント: [website/public/docs/](website/public/docs/)
+完全なドキュメント: [qwenpaw.agentscope.io/docs](https://qwenpaw.agentscope.io/docs)
 
 ---
 
 ## FAQ
 
-よくある質問、トラブルシューティングのヒント、既知の問題については、**[FAQページ](https://copaw.agentscope.io/docs/faq)** をご覧ください。
+よくある質問、トラブルシューティングのヒント、既知の問題については、**[FAQ ページ](https://qwenpaw.agentscope.io/docs/faq)** をご覧ください。
 
 ---
 
 ## ロードマップ
 
-| 方向 | 項目 | 状態 |
-| --- | --- | --- |
-| **横展開** | より多くのチャネル、モデル、スキル、MCP など — **コミュニティの貢献歓迎** | 貢献者募集中 |
-| **既存機能の拡張・改善** | 表示の最適化、ダウンロードヒント、Windowsパス互換など — **コミュニティの貢献歓迎** | 貢献者募集中 |
-| **コンソール Web UI** | コンソールでより多くの情報と設定を公開 | 進行中 |
-| **自己修復** | マジックコマンドとデーモン機能（CLI、status、restart、logs） | 進行中 |
-| | DaemonAgent: 自律診断、自己修復、復旧 | 計画中 |
-| **マルチエージェント** | バックグラウンドタスクサポート | 進行中 |
-| | マルチエージェントの分離 | 計画中 |
-| | エージェント間の競合・衝突の解決 | 計画中 |
-| | マルチエージェント通信 | 計画中 |
-| **マルチモーダル** | 音声/ビデオ通話とリアルタイム対話 | 進行中 |
-| **大小モデル協調** | CoPaw ワークフローと機密データ向けのローカル小モデル学習・ファインチューニング | 進行中 |
-| | マルチモデルルーティング。ローカルモデルで機密データ処理、クラウドモデルで計画・コーディング；プライバシー・性能・能力の両立 | 計画中 |
-| **メモリシステム** | 経験の蓄積とスキル抽出 | 進行中 |
-| | マルチモーダルメモリの融合強化 | 計画中 |
-| | シーン認識による能動的プッシュ | 計画中 |
-| **セキュリティ** | シェル実行の確認 | 計画中 |
-| | ツール/スキルのセキュリティ | 計画中 |
-| | 設定可能なセキュリティレベル | 計画中 |
-| **バージョンリリース・貢献規範** | Vibe Coding 等のエージェント向け貢献ガイダンス | 計画中 |
-| **サンドボックス** | AgentScope Runtime サンドボックスとの深い統合 | 長期計画 |
-| **クラウドネイティブ** | AgentScope Runtime との深い統合、クラウド算力・ストレージ・ツールエコシステムの活用 | 長期計画 |
-| **スキルエコシステム** | [AgentScope Skills](https://github.com/agentscope-ai/agentscope-skills) リポジトリの充実、高品質スキルの発見・利用向上 | 長期計画 |
+| 方向                           | 項目                                          | 状態         |
+| ------------------------------ | --------------------------------------------- | ------------ |
+| **横展開**                     | チャネル、モデル、スキル、MCP の追加          | 貢献者募集中 |
+| **既存機能の拡張**             | 表示、ダウンロード、Windows 対応の改善        | 貢献者募集中 |
+| **モデル**                     | マルチモデル切り替え                          | 進行中       |
+| **安全と承認**                 | 操作の一括確認と承認                          | 進行中       |
+| **自動化**                     | 自動化タスク                                  | 進行中       |
+| **エージェント連携**           | エージェント間のタスク引き継ぎ                | 進行中       |
+|                                | 実行中タスクの調整                            | 進行中       |
+| **ワークスペース**             | マルチワークスペース                          | 進行中       |
+| **コンテキスト**               | システムプロンプト圧縮                        | 進行中       |
+| **ツールシステム**             | 複数箇所のファイル変更                        | 進行中       |
+|                                | 永続ターミナルとバックグラウンドタスク        | 進行中       |
+| **Computer-use**               | 画面上の対象特定と操作                        | 進行中       |
+| **音声対話**                   | リアルタイム音声タスク                        | 進行中       |
+| **コンテキスト管理とメモリ**   | ベクトルモデルと保存先のホット切り替え        | 進行中       |
+|                                | 個人ナレッジベース                            | 進行中       |
+| **QwenPaw アプリケーション**   | QwenPaw Insight                               | 進行中       |
+|                                | QwenPaw Mail                                  | 進行中       |
 
-*状態説明：進行中 — 推進中；計画中 — 予定または設計中、**貢献も歓迎**；**貢献者募集中** — **コミュニティの参加を歓迎**；長期計画 — 中長期ロードマップ。*
+_状態:_ **進行中** — 積極的に開発中；**貢献者募集中** — コミュニティの参加を強く推奨。
 
-### 参加方法
+---
 
-CoPawはオープンに開発しており、あらゆる形の貢献を歓迎しています！上記の[ロードマップ](#ロードマップ)（特に**貢献者募集中**の項目）から興味のある領域を選び、[CONTRIBUTING](https://github.com/agentscope-ai/CoPaw/blob/main/CONTRIBUTING.md)を読んで始めてください。特に歓迎するのは：
+## コントリビュート
+
+QwenPaw はオープンな協働により進化を続けており、あらゆる形の貢献を歓迎しています！上記の [ロードマップ](#ロードマップ)（特に **貢献者募集中** の項目）から興味のある領域を選び、[CONTRIBUTING](https://github.com/agentscope-ai/QwenPaw/blob/main/CONTRIBUTING.md) を読んで始めてください。特に歓迎するのは：
 
 - **横展開** — 新規チャネル、モデルプロバイダー、スキル、MCP。
-- **既存機能の拡張・改善** — 表示とインタラクションの最適化、ダウンロードヒント、Windowsパス互換など。
+- **既存機能の拡張 & 改善** — 表示と操作の最適化、ダウンロードヒント、Windows パス互換性など。
 
-[GitHub Discussions](https://github.com/agentscope-ai/CoPaw/discussions)で議論に参加し、アイデアを提案したりタスクを担当したりしてください。
+[GitHub Discussions](https://github.com/agentscope-ai/QwenPaw/discussions) でアイデアを議論したりタスクを引き受けたりしてください。
 
 ---
 
 ## ソースからインストール
 
 ```bash
-git clone https://github.com/agentscope-ai/CoPaw.git
-cd CoPaw
+git clone https://github.com/agentscope-ai/QwenPaw.git
+cd QwenPaw
 
-# まずコンソールフロントエンドをビルド（Web UIに必須）
+# まずコンソールフロントエンドをビルド（Web UI に必須）
 cd console && npm ci && npm run build
 cd ..
 
 # コンソールのビルド出力をパッケージディレクトリにコピー
-mkdir -p src/copaw/console
-cp -R console/dist/. src/copaw/console/
+mkdir -p src/qwenpaw/console
+cp -R console/dist/. src/qwenpaw/console/
 
-# Pythonパッケージのインストール
+# Python パッケージのインストール
 pip install -e .
 ```
 
-- **開発**（テスト、フォーマット）: `pip install -e ".[dev,full]"`
-- **その後**: `copaw init --defaults` を実行し、次に `copaw app` を実行。
+- **開発**（テスト、フォーマット）: `pip install -e ".[dev,test,full]"`
+- **その後**: `qwenpaw init --defaults` を実行し、次に `qwenpaw app`。
+
+> **アップデート時の注意:** `git pull` 後に新しいメジャーバージョンにアップデートする場合は、フロントエンドの再ビルド、パッケージの再インストール（`pip install -e .`）、`qwenpaw app` の再起動、およびブラウザキャッシュの削除（`Ctrl+Shift+R` または macOS では `Cmd+Shift+R`）も行ってください。
 
 ---
 
-## なぜCoPaw？
+## なぜ QwenPaw？
 
-CoPawは **Co Personal Agent Workstation**（共同パーソナルエージェントワークステーション）であると同時に、「co-paw」— いつもあなたのそばにいるパートナーを表しています。単なる冷たいツールではなく、CoPawはいつでも手（または肉球！）を貸してくれる温かい「小さな肉球」です。デジタルライフにおける究極のチームメイトです。
+QwenPaw は Qwen Personal Agent Workstation（Qwen 個人エージェントワークステーション）の略であると同時に、Qwen の知性と Paw の温もりを体現しています。単なる冷たいツールではなく、いつでも手を差し伸べてくれる、賢くて温かい「小さな爪」でありたい — あなたのデジタルライフで最も息の合ったパートナーです。
 
 ---
 
-## 開発チーム
+## 開発元
 
 [AgentScope team](https://github.com/agentscope-ai) · [AgentScope](https://github.com/agentscope-ai/agentscope) · [AgentScope Runtime](https://github.com/agentscope-ai/agentscope-runtime) · [ReMe](https://github.com/agentscope-ai/ReMe)
 
@@ -459,41 +513,51 @@ CoPawは **Co Personal Agent Workstation**（共同パーソナルエージェ�
 
 ## お問い合わせ
 
-| [Discord](https://discord.gg/eYMpfnkG8h)                     | [X (Twitter)](https://x.com/agentscope_ai)                   | [DingTalk](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11) |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| [<img src="https://gw.alicdn.com/imgextra/i1/O1CN01hhD1mu1Dd3BWVUvxN_!!6000000000238-2-tps-400-400.png" width="80" height="80" alt="Discord">](https://discord.gg/eYMpfnkG8h) | [<img src="https://img.shields.io/badge/X-black.svg?logo=x&logoColor=white" width="80" height="80" alt="X">](https://x.com/agentscope_ai) | [<img src="https://img.alicdn.com/imgextra/i2/O1CN01vCWI8a1skHtLGXEMQ_!!6000000005804-2-tps-458-460.png" width="80" height="80" alt="DingTalk">](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11) |
+| [Discord](https://discord.gg/eYMpfnkG8h)                     | [X (Twitter)](https://x.com/agentscope_ai)                   | [DingTalk](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11) | [RedNote](https://www.xiaohongshu.com/user/profile/691c18db0000000037032be9) |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [<img src="https://gw.alicdn.com/imgextra/i1/O1CN01hhD1mu1Dd3BWVUvxN_!!6000000000238-2-tps-400-400.png" width="80" height="80" alt="Discord">](https://discord.gg/eYMpfnkG8h) | [<img src="https://img.shields.io/badge/X-black.svg?logo=x&logoColor=white" width="80" height="80" alt="X">](https://x.com/agentscope_ai) | [<img src="https://img.alicdn.com/imgextra/i2/O1CN01vCWI8a1skHtLGXEMQ_!!6000000005804-2-tps-458-460.png" width="80" height="80" alt="DingTalk">](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11) | [<img src="https://img.alicdn.com/imgextra/i3/O1CN016BoEPS1l33CE9mHb9_!!6000000004762-0-tps-160-160.jpg" width="80" height="80" alt="RedNote">](https://www.xiaohongshu.com/user/profile/691c18db0000000037032be9) |
+
+---
+
+## 最新情報をいち早く
+
+<a href="https://github.com/agentscope-ai/QwenPaw">
+  <img src="https://img.alicdn.com/imgextra/i1/O1CN01V8HYv61By0HYcIDaq_!!6000000000013-1-tps-1698-954.gif" width="600" alt="Star QwenPaw" />
+</a>
+
+GitHub で QwenPaw にスターを付けて、新しいリリースの通知を即座に受け取りましょう。
 
 ---
 
 ## テレメトリ
 
-CoPawは `copaw init` 実行時に**匿名**の利用データを収集し、ユーザー環境の把握と製品改善に役立てています。データは**バージョンごとに1回**送信されます — CoPawをアップグレードすると、バージョン分布を把握するために再収集されます。
+QwenPaw は `qwenpaw init` 実行時に **匿名** の利用データを収集し、ユーザー環境の把握と製品改善に役立てています。データは **バージョンごとに 1 回** 送信されます — QwenPaw をアップグレードすると、バージョン分布を把握するために再収集されます。
 
 **収集する情報：**
 
-- CoPawバージョン（例: 0.0.7）
+- QwenPaw バージョン（例: 1.1.12）
 - インストール方法（pip、Docker、またはデスクトップアプリ）
-- OSとバージョン（例: macOS 14.0、Ubuntu 22.04）
-- Pythonバージョン（例: 3.13）
-- CPUアーキテクチャ（例: x86_64、arm64）
-- GPUの利用可否（はい/いいえ）
+- OS とバージョン（例: macOS 14.0、Ubuntu 22.04）
+- Python バージョン（例: 3.13）
+- CPU アーキテクチャ（例: x86_64、arm64）
+- GPU の利用可否（はい/いいえ）
 
-**収集しないもの：** 個人データ、ファイル、認証情報、IPアドレス、個人を特定できる情報は一切収集しません。
+**収集しないもの：** 個人データ、ファイル、認証情報、IP アドレス、個人を特定できる情報は一切収集しません。
 
-`copaw init` を対話モードで実行すると、同意するかどうか尋ねられます。`--defaults` モードでは自動的に同意されます。プロンプトはバージョンごとに1回のみ表示され、CoPawの機能には影響しません。
+`qwenpaw init` を対話モードで実行すると、同意するかどうか尋ねられます。`--defaults` モードでは自動的に同意されます。プロンプトはバージョンごとに 1 回のみ表示され、QwenPaw の機能には影響しません。
 
 ---
 
 ## ライセンス
 
-CoPawは[Apache License 2.0](LICENSE)の下でリリースされています。
+QwenPaw は [Apache License 2.0](LICENSE) の下でリリースされています。
 
 ---
 
 ## コントリビューター
 
-CoPawをより良くするために貢献してくださったすべての方々に感謝します：
+QwenPaw をより良くするために貢献してくださったすべての方々に感謝します：
 
-<a href="https://github.com/agentscope-ai/CoPaw/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=agentscope-ai/CoPaw" alt="コントリビューター" />
+<a href="https://github.com/agentscope-ai/QwenPaw/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=agentscope-ai/QwenPaw" alt="コントリビューター" />
 </a>

@@ -1,72 +1,89 @@
-import { useEffect, useState } from "react";
+import { lazy, useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { loadSiteConfig, type SiteConfig } from "./config";
-import { type Lang, t } from "./i18n";
-import { Home } from "./pages/Home";
-import { Docs } from "./pages/Docs";
-import { ReleaseNotes } from "./pages/ReleaseNotes";
-import "./index.css";
+import { useTranslation } from "react-i18next";
+import { loadSiteConfig, type SiteConfig, defaultConfig } from "@/config";
+import { SiteConfigProvider } from "@/config-context";
+import { SiteLayout } from "@/components/SiteLayout";
+import { GA_ID, loadGoogleAnalytics } from "@/lib/analytics";
+import "@/index.css";
 
-const LANG_KEY = "site-lang";
+// Lazy load page components for better performance
+const Home = lazy(() => import("@/pages/Home"));
+const Docs = lazy(() => import("@/pages/Docs"));
+const Blog = lazy(() => import("@/pages/Blog"));
+const BlogPost = lazy(() => import("@/pages/Blog/Post"));
+const ReleaseNotes = lazy(() => import("@/pages/ReleaseNotes"));
+const Downloads = lazy(() => import("@/pages/Downloads"));
 
-function getInitialLang(): Lang {
-  const params = new URLSearchParams(window.location.search);
-  const urlLang = params.get("lang");
-  if (urlLang === "en" || urlLang === "zh") {
-    localStorage.setItem(LANG_KEY, urlLang);
-    return urlLang;
-  }
-  const v = localStorage.getItem(LANG_KEY);
-  return v === "en" ? "en" : "zh";
+/**
+ * Initial loading fallback component
+ */
+function LoadingFallback() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="min-h-screen flex items-center justify-center text-[var(--text-muted)]">
+      {t("docs.searchLoading")}
+    </div>
+  );
 }
 
 export default function App() {
-  const [config, setConfig] = useState<SiteConfig | null>(null);
-  const [lang, setLang] = useState<Lang>(getInitialLang);
+  const [config, setConfig] = useState<SiteConfig>(defaultConfig);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load site configuration
   useEffect(() => {
-    loadSiteConfig().then(setConfig);
+    loadSiteConfig()
+      .then((loadedConfig) => {
+        setConfig(loadedConfig);
+      })
+      .catch((error) => {
+        console.error("[Config] Failed to load configuration:", error);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
-  const toggleLang = () => {
-    const next: Lang = lang === "zh" ? "en" : "zh";
-    setLang(next);
-    localStorage.setItem(LANG_KEY, next);
-  };
+  // Load Google Analytics after page is fully loaded
+  useEffect(() => {
+    const handleLoad = () => {
+      loadGoogleAnalytics(GA_ID);
+    };
 
-  if (!config) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "var(--text-muted)",
-        }}
-      >
-        {t(lang, "nav.docs")}
-      </div>
-    );
+    if (document.readyState === "complete") {
+      handleLoad();
+    } else {
+      window.addEventListener("load", handleLoad, { once: true });
+    }
+
+    // Cleanup: remove listener if component unmounts before load
+    return () => {
+      window.removeEventListener("load", handleLoad);
+    };
+  }, []);
+
+  // Show loading state while config is being loaded
+  if (isLoading) {
+    return <LoadingFallback />;
   }
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={<Home config={config} lang={lang} onLangClick={toggleLang} />}
-      />
-      <Route path="/docs" element={<Navigate to="/docs/intro" replace />} />
-      <Route
-        path="/docs/:slug"
-        element={<Docs config={config} lang={lang} onLangClick={toggleLang} />}
-      />
-      <Route
-        path="/release-notes"
-        element={
-          <ReleaseNotes config={config} lang={lang} onLangClick={toggleLang} />
-        }
-      />
-    </Routes>
+    <SiteConfigProvider config={config}>
+      <Routes>
+        <Route element={<SiteLayout showFooter />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/downloads" element={<Downloads />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+        </Route>
+        <Route element={<SiteLayout showFooter={false} />}>
+          <Route path="/docs" element={<Navigate to="/docs/intro" replace />} />
+          <Route path="/docs/:slug" element={<Docs />} />
+          <Route path="/release-notes" element={<ReleaseNotes />} />
+        </Route>
+      </Routes>
+    </SiteConfigProvider>
   );
 }

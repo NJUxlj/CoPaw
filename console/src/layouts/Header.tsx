@@ -1,89 +1,157 @@
-import { Layout, Space } from "antd";
-import LanguageSwitcher from "../components/LanguageSwitcher";
-import ThemeToggleButton from "../components/ThemeToggleButton";
-import AgentSelector from "../components/AgentSelector";
-import { useTranslation } from "react-i18next";
+import { Layout, Space, Tooltip, Dropdown } from "antd";
+import type { MenuProps } from "antd";
+import { Button } from "@agentscope-ai/design";
 import {
+  DownOutlined,
   FileTextOutlined,
-  BookOutlined,
-  QuestionCircleOutlined,
   GithubOutlined,
+  InfoCircleOutlined,
+  PlayCircleOutlined,
+  ReadOutlined,
 } from "@ant-design/icons";
-import { Button, Tooltip } from "@agentscope-ai/design";
-import styles from "./index.module.less";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher, {
+  LANGUAGE_LIST,
+} from "../components/LanguageSwitcher/index";
+import ThemeToggleButton from "../components/ThemeToggleButton";
+import { useTheme } from "../contexts/ThemeContext";
+import { Slot } from "../plugins/registry/Slot";
+import { openExternalLink } from "../utils/openExternalLink";
+import AppBrand from "./AppBrand";
 import {
   GITHUB_URL,
-  KEY_TO_LABEL,
   getDocsUrl,
   getFaqUrl,
+  getFeatureDemosUrl,
   getReleaseNotesUrl,
 } from "./constants";
+import styles from "./index.module.less";
 
 const { Header: AntHeader } = Layout;
 
-interface HeaderProps {
-  selectedKey: string;
-}
-
-export default function Header({ selectedKey }: HeaderProps) {
+export default function Header({ showBrand = false }: { showBrand?: boolean }) {
   const { t, i18n } = useTranslation();
+  const { setThemeMode } = useTheme();
 
   const handleNavClick = (url: string) => {
-    if (url) {
-      const pywebview = (window as any).pywebview;
-      if (pywebview?.api) {
-        pywebview.api.open_external_link(url);
-      } else {
-        window.open(url, "_blank");
-      }
-    }
+    openExternalLink(url);
   };
+
+  const resourcesMenuItems: MenuProps["items"] = [
+    {
+      key: "tutorial",
+      icon: <ReadOutlined />,
+      label: t("header.tutorial"),
+      onClick: () => handleNavClick(getDocsUrl(i18n.language)),
+    },
+    {
+      key: "featureDemos",
+      icon: <PlayCircleOutlined />,
+      label: t("header.featureDemos"),
+      onClick: () => handleNavClick(getFeatureDemosUrl(i18n.language)),
+    },
+    {
+      key: "changelog",
+      icon: <FileTextOutlined />,
+      label: t("header.changelog"),
+      onClick: () => handleNavClick(getReleaseNotesUrl(i18n.language)),
+    },
+    {
+      key: "faq",
+      icon: <InfoCircleOutlined />,
+      label: t("header.faq"),
+      onClick: () => handleNavClick(getFaqUrl(i18n.language)),
+    },
+  ];
+
+  const githubMenuItem: MenuProps["items"] = [
+    {
+      key: "github",
+      icon: <GithubOutlined />,
+      label: t("header.github"),
+      onClick: () => handleNavClick(GITHUB_URL),
+    },
+  ];
+
+  const mobileMenuItems: MenuProps["items"] = [
+    {
+      key: "language",
+      label: t("sidebar.settings.language"),
+      children: LANGUAGE_LIST.map(({ key, label }) => ({
+        key,
+        label,
+        onClick: () => {
+          i18n.changeLanguage(key);
+          localStorage.setItem("language", key);
+        },
+      })),
+    },
+    {
+      key: "theme",
+      label: t("sidebar.settings.theme"),
+      children: [
+        {
+          key: "light",
+          label: t("theme.light"),
+          onClick: () => setThemeMode("light"),
+        },
+        {
+          key: "dark",
+          label: t("theme.dark"),
+          onClick: () => setThemeMode("dark"),
+        },
+        {
+          key: "system",
+          label: t("theme.system"),
+          onClick: () => setThemeMode("system"),
+        },
+      ],
+    },
+    { type: "divider" },
+    ...resourcesMenuItems,
+    ...githubMenuItem,
+  ];
 
   return (
     <AntHeader className={styles.header}>
-      <span className={styles.headerTitle}>
-        {t(KEY_TO_LABEL[selectedKey] || "nav.chat")}
-      </span>
+      <div className={styles.headerPluginLeft}>
+        {showBrand && <AppBrand />}
+        <Slot name="header.left" kind="fill" />
+      </div>
       <Space size="middle">
-        <AgentSelector />
-        <Tooltip title={t("header.changelog")}>
-          <Button
-            icon={<FileTextOutlined />}
-            type="text"
-            onClick={() => handleNavClick(getReleaseNotesUrl(i18n.language))}
-          >
-            {t("header.changelog")}
-          </Button>
-        </Tooltip>
-        <Tooltip title={t("header.docs")}>
-          <Button
-            icon={<BookOutlined />}
-            type="text"
-            onClick={() => handleNavClick(getDocsUrl(i18n.language))}
-          >
-            {t("header.docs")}
-          </Button>
-        </Tooltip>
-        <Tooltip title={t("header.faq")}>
-          <Button
-            icon={<QuestionCircleOutlined />}
-            type="text"
-            onClick={() => handleNavClick(getFaqUrl(i18n.language))}
-          >
-            {t("header.faq")}
-          </Button>
-        </Tooltip>
+        <Slot name="header.right" kind="fill" />
+        {resourcesMenuItems.length > 0 && (
+          <Dropdown menu={{ items: resourcesMenuItems }}>
+            <Button type="text" className={styles.hideOnMobile}>
+              {t("header.resources")} <DownOutlined />
+            </Button>
+          </Dropdown>
+        )}
         <Tooltip title={t("header.github")}>
           <Button
-            icon={<GithubOutlined />}
             type="text"
+            icon={<GithubOutlined />}
             onClick={() => handleNavClick(GITHUB_URL)}
+            className={styles.hideOnMobile}
           >
             {t("header.github")}
           </Button>
         </Tooltip>
-        <LanguageSwitcher />
-        <ThemeToggleButton />
+        <div className={styles.headerDivider} />
+        <span className={styles.hideOnMobile}>
+          <LanguageSwitcher />
+        </span>
+        <span className={styles.hideOnMobile}>
+          <ThemeToggleButton />
+        </span>
+        <Dropdown menu={{ items: mobileMenuItems }} placement="bottomRight">
+          <Button
+            type="text"
+            icon={<InfoCircleOutlined />}
+            className={styles.showOnMobile}
+            title={t("header.resources")}
+          />
+        </Dropdown>
       </Space>
     </AntHeader>
   );

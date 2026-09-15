@@ -1,6 +1,43 @@
+export type ModelAvailabilityStatus =
+  | "available"
+  | "permission_denied"
+  | "model_not_found"
+  | "incompatible_api"
+  | "rate_limited"
+  | "transient_error"
+  | "unverified";
+
 export interface ModelInfo {
   id: string;
   name: string;
+  supports_multimodal: boolean | null;
+  supports_image: boolean | null;
+  supports_video: boolean | null;
+  probe_source?: string | null;
+  is_free?: boolean;
+  is_recommended?: boolean;
+  source?: "builtin" | "discovered" | "user";
+  discovery_origin?: "api" | "catalog" | "both" | null;
+  availability_status?: ModelAvailabilityStatus;
+  max_output_length?: number | null;
+  max_output_length_source?: "api" | "catalog" | "adapter" | "user" | "unknown";
+  max_output_length_updated_at?: string | null;
+  max_input_length: number;
+  max_input_length_configured?: boolean;
+  max_input_length_auto_detected?: number | null;
+  generate_kwargs: Record<string, unknown>;
+  relay_reasoning: boolean;
+  thinking_enabled: boolean | null;
+  thinking_budget: number | null;
+  reasoning_effort: string | null;
+  /** Per-model override: 'budget' or 'effort'. Falls back to provider-level. */
+  thinking_param_style?: "budget" | "effort" | null;
+  /** Per-model override for reasoning_effort options. */
+  reasoning_effort_options?: string[] | null;
+  /** Per-model override for thinking_budget [min, max] range. */
+  thinking_budget_range?: [number, number] | null;
+  /** Backend-derived support for agent-level thinking overrides. */
+  supports_agent_thinking?: boolean | null;
 }
 
 export interface ProviderInfo {
@@ -12,6 +49,12 @@ export interface ProviderInfo {
   models: ModelInfo[];
   /** User-added models (deletable). Only populated for built-in providers. */
   extra_models: ModelInfo[];
+  /** Last successful model catalog fetched from the provider API. */
+  discovered_models?: ModelInfo[];
+  models_last_synced_at?: string | null;
+  models_last_sync_error?: string | null;
+  models_syncing?: boolean;
+  hidden_model_ids?: string[];
   is_custom: boolean;
   is_local: boolean;
   /** Whether this provider supports fetching available models from the provider's API. */
@@ -25,14 +68,55 @@ export interface ProviderInfo {
   api_key: string;
   base_url: string;
   generate_kwargs: Record<string, unknown>;
+  /** Custom HTTP headers sent with every request to this provider. */
+  custom_headers?: Record<string, string>;
+  /** Authentication mode: 'api_key' (x-api-key) or 'auth_token' (Authorization: Bearer). */
+  auth_mode?: "api_key" | "auth_token";
+  /** Whether this provider supports OAuth login. */
+  supports_oauth?: boolean;
+  /** Whether OAuth is currently connected. */
+  oauth_connected?: boolean;
+  /** Whether this provider offers a free tier. */
+  is_free_tier?: boolean;
+  /** Group key for same-brand providers (e.g. "aliyun"). */
+  provider_group?: string;
+  /** Display name for the provider group (e.g. "Aliyun"). */
+  provider_group_name?: string;
+  /** Variant within a group (e.g. "coding_plan_cn"). */
+  provider_variant?: string;
+  /** Which thinking-parameter UI to show: 'budget' or 'effort'. null = not supported. */
+  thinking_param_style?: "budget" | "effort" | null;
+  /** Valid reasoning_effort values for this provider. */
+  reasoning_effort_options?: string[];
+  /** [min, max] range for thinking_budget Slider. */
+  thinking_budget_range?: [number, number];
+  /** Provider-specific metadata (e.g. base_url_options for region selection). */
+  meta?: Record<string, unknown>;
+  /** Accepted API key prefixes. When present, validation accepts any prefix in this list. */
+  api_key_prefixes?: string[];
+}
+
+/** Predefined base URL option exposed via `ProviderInfo.meta.base_url_options`. */
+export interface BaseUrlOption {
+  label: string;
+  value: string;
 }
 
 export interface ProviderConfigRequest {
   api_key?: string;
   base_url?: string;
+  /** New display name. Only applied to custom providers. */
+  name?: string;
   chat_model?: string;
   generate_kwargs?: Record<string, unknown>;
+  custom_headers?: Record<string, string>;
+  auth_mode?: "api_key" | "auth_token";
 }
+
+export type CustomChatModelName =
+  | "OpenAIChatModel"
+  | "OpenAIResponseModel"
+  | "AnthropicChatModel";
 
 export interface ModelSlotConfig {
   provider_id: string;
@@ -40,12 +124,22 @@ export interface ModelSlotConfig {
 }
 
 export interface ActiveModelsInfo {
-  active_llm?: ModelSlotConfig;
+  active_llm: ModelSlotConfig | null;
+  effective_max_input_length?: number | null;
+}
+
+export type ActiveModelScope = "effective" | "global" | "agent";
+
+export interface GetActiveModelsRequest {
+  scope?: ActiveModelScope;
+  agent_id?: string;
 }
 
 export interface ModelSlotRequest {
   provider_id: string;
   model: string;
+  scope: Exclude<ActiveModelScope, "effective">;
+  agent_id?: string;
 }
 
 /* ---- Custom provider CRUD ---- */
@@ -55,65 +149,90 @@ export interface CreateCustomProviderRequest {
   name: string;
   default_base_url?: string;
   api_key_prefix?: string;
-  chat_model?: string;
+  chat_model?: CustomChatModelName;
   models?: ModelInfo[];
 }
 
 export interface AddModelRequest {
   id: string;
   name: string;
+  is_free?: boolean;
+  supports_multimodal?: boolean | null;
+  supports_image?: boolean | null;
+  supports_video?: boolean | null;
+  probe_source?: string | null;
+}
+
+export interface ModelConfigRequest {
+  max_input_length?: number;
+  generate_kwargs?: Record<string, unknown>;
+  relay_reasoning?: boolean;
+  thinking_enabled?: boolean | null;
+  thinking_budget?: number | null;
+  reasoning_effort?: string | null;
+}
+
+export interface LocalModelConfig {
+  max_context_length: number;
+  port: number | null;
+}
+
+export interface LocalModelConfigRequest {
+  max_context_length?: number;
+  port?: number | null;
+  generate_kwargs?: Record<string, unknown>;
 }
 
 /* ---- Local models ---- */
 
-export interface LocalModelResponse {
+export interface LocalModelInfo {
   id: string;
-  repo_id: string;
-  filename: string;
-  backend: string;
-  source: string;
-  file_size: number;
-  local_path: string;
-  display_name: string;
+  name: string;
+  size_bytes: number;
+  downloaded: boolean;
+  source: LocalDownloadSource;
 }
 
-export interface DownloadModelRequest {
-  repo_id: string;
-  filename?: string;
-  backend: string;
-  source: string;
+export type LocalDownloadSource = "huggingface" | "modelscope" | "auto";
+
+export interface LocalServerStatus {
+  available: boolean;
+  installable: boolean;
+  installed: boolean;
+  port: number | null;
+  model_name: string | null;
+  message: string | null;
 }
 
-export interface DownloadTaskResponse {
-  task_id: string;
-  status: "pending" | "downloading" | "completed" | "failed" | "cancelled";
-  repo_id: string;
-  filename: string | null;
-  backend: string;
-  source: string;
+export interface LocalServerUpdateStatus {
+  has_update: boolean;
+}
+
+export interface LocalDownloadProgress {
+  status:
+    | "idle"
+    | "pending"
+    | "downloading"
+    | "canceling"
+    | "completed"
+    | "failed"
+    | "cancelled";
+  model_name: string | null;
+  downloaded_bytes: number;
+  total_bytes: number | null;
+  speed_bytes_per_sec: number;
+  source: LocalDownloadSource | null;
   error: string | null;
-  result: LocalModelResponse | null;
+  local_path: string | null;
 }
 
-/* ---- Ollama models ---- */
-
-export interface OllamaModelResponse {
-  name: string;
-  size: number;
-  digest?: string | null;
-  modified_at?: string | null;
+export interface LocalActionResponse {
+  status: string;
+  message: string;
 }
 
-export interface OllamaDownloadRequest {
-  name: string;
-}
-
-export interface OllamaDownloadTaskResponse {
-  task_id: string;
-  status: "pending" | "downloading" | "completed" | "failed" | "cancelled";
-  name: string;
-  error: string | null;
-  result: OllamaModelResponse | null;
+export interface StartLocalServerRequest {
+  model_id: string;
 }
 
 /* ---- Test Connection ---- */
@@ -121,6 +240,7 @@ export interface OllamaDownloadTaskResponse {
 export interface TestConnectionResponse {
   success: boolean;
   message: string;
+  status?: ModelAvailabilityStatus;
 }
 
 export interface TestProviderRequest {
@@ -128,6 +248,15 @@ export interface TestProviderRequest {
   base_url?: string;
   chat_model?: string;
   generate_kwargs?: Record<string, unknown>;
+  include_extended?: boolean;
+  custom_headers?: Record<string, string>;
+  auth_mode?: "api_key" | "auth_token";
+}
+
+export interface DiscoverModelsRequest {
+  api_key?: string;
+  base_url?: string;
+  chat_model?: string;
 }
 
 export interface TestModelRequest {
@@ -138,5 +267,50 @@ export interface DiscoverModelsResponse {
   success: boolean;
   message: string;
   models: ModelInfo[];
-  added_count: number;
+  discovered_count: number;
+  error_kind?: string | null;
+}
+
+export interface ProbeMultimodalResponse {
+  supports_image: boolean;
+  supports_video: boolean;
+  supports_multimodal: boolean;
+  image_message: string;
+  video_message: string;
+}
+
+/* ---- OpenRouter extended model types ---- */
+
+export interface ExtendedModelInfo extends Partial<ModelInfo> {
+  id: string;
+  name: string;
+  provider: string;
+  input_modalities: string[];
+  output_modalities: string[];
+  pricing: Record<string, string>;
+}
+
+export interface FilterModelsRequest {
+  providers?: string[];
+  input_modalities?: string[];
+  output_modalities?: string[];
+  max_prompt_price?: number;
+  is_free?: boolean;
+}
+
+export interface SeriesResponse {
+  series: string[];
+}
+
+export interface DiscoverExtendedResponse {
+  success: boolean;
+  models: ExtendedModelInfo[];
+  providers: string[];
+  total_count: number;
+}
+
+export interface FilterModelsResponse {
+  success: boolean;
+  models: ExtendedModelInfo[];
+  total_count: number;
 }

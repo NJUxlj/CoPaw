@@ -20,11 +20,11 @@ export function useProviders() {
     try {
       const [provData, activeData] = await Promise.all([
         api.listProviders(),
-        api.getActiveModels(),
+        api.getActiveModels({ scope: "global" }),
       ]);
       if (!Array.isArray(provData)) {
         throw new Error(
-          "Unexpected API response. Is BASE_URL configured correctly?",
+          "Unexpected API response. Is VITE_API_BASE_URL configured correctly?",
         );
       }
       setProviders(provData);
@@ -41,9 +41,21 @@ export function useProviders() {
     }
   }, []);
 
+  // Re-fetch when agent changes to ensure UI stays in sync even though
+  // this page uses scope:"global". If future requirements add agent-scoped
+  // models, this dependency will be needed.
   useEffect(() => {
     fetchAll();
   }, [fetchAll, selectedAgent]);
+
+  useEffect(() => {
+    if (!providers.some((provider) => provider.models_syncing)) return;
+
+    const timer = window.setInterval(() => {
+      void fetchAll(false);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [fetchAll, providers]);
 
   return {
     providers,

@@ -6,44 +6,19 @@ import {
   Switch,
   Button,
   Select,
-  message,
 } from "@agentscope-ai/design";
+import { useAppMessage } from "../../../../hooks/useAppMessage";
 import { Alert, ConfigProvider } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
 import type { FormInstance } from "antd";
-import { useCallback, useRef } from "react";
-import { getChannelLabel, type ChannelKey } from "./constants";
+import { getChannelLabel, isLoopbackHost, type ChannelKey } from "./constants";
+import { QrcodeAuthBlock } from "./QrcodeAuthBlock";
+import type { ChannelSchema } from "../../../../api/modules/channel";
 import styles from "../index.module.less";
-import { useTheme } from "../../../../contexts/ThemeContext";
-
-const WECOM_SDK_URL =
-  "https://wwcdn.weixin.qq.com/node/wework/js/wecom-aibot-sdk@0.1.0.min.js";
-
-const WECOM_SOURCE = "copaw";
-
-interface WecomBotInfo {
-  botid: string;
-  secret: string;
-}
-
-interface WecomAuthError {
-  code: string;
-  message: string;
-  details?: unknown;
-}
-
-declare global {
-  interface Window {
-    WecomAIBotSDK?: {
-      openBotInfoAuthWindow: (options: {
-        source: string;
-        onCreated?: (bot: WecomBotInfo) => void;
-        onError?: (error: WecomAuthError) => void;
-      }) => Promise<WecomBotInfo> | void;
-    };
-  }
-}
+import { useAgentStore } from "../../../../stores/agentStore";
+import { openExternalLink } from "../../../../utils/openExternalLink";
 
 const CHANNELS_WITH_ACCESS_CONTROL: ChannelKey[] = [
   "telegram",
@@ -53,41 +28,64 @@ const CHANNELS_WITH_ACCESS_CONTROL: ChannelKey[] = [
   "wecom",
   "mattermost",
   "matrix",
+  "wechat",
+  "imessage",
+  "onebot",
+  "qq",
+  "mqtt",
+  "xiaoyi",
+  "yuanbao",
+  "slack",
 ];
 
-// Doc EN URLs per channel (anchors on https://copaw.agentscope.io/docs/channels)
+// Doc EN URLs per channel (anchors on https://qwenpaw.agentscope.io/docs/channels)
 const CHANNEL_DOC_EN_URLS: Partial<Record<ChannelKey, string>> = {
   dingtalk:
-    "https://copaw.agentscope.io/docs/channels/?lang=en#DingTalk-recommended",
-  feishu: "https://copaw.agentscope.io/docs/channels/?lang=en#Feishu-Lark",
+    "https://qwenpaw.agentscope.io/docs/channels/?lang=en#DingTalk-recommended",
+  feishu: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#Feishu-Lark",
   imessage:
-    "https://copaw.agentscope.io/docs/channels/?lang=en#iMessage-macOS-only",
-  discord: "https://copaw.agentscope.io/docs/channels/?lang=en#Discord",
-  qq: "https://copaw.agentscope.io/docs/channels/?lang=en#QQ",
-  telegram: "https://copaw.agentscope.io/docs/channels/?lang=en#Telegram",
-  mqtt: "https://copaw.agentscope.io/docs/channels/?lang=en#MQTT",
-  mattermost: "https://copaw.agentscope.io/docs/channels/?lang=en#Mattermost",
-  matrix: "https://copaw.agentscope.io/docs/channels/?lang=en#Matrix",
-  wecom: "https://copaw.agentscope.io/docs/channels/?lang=en#WeCom-WeChat-Work",
+    "https://qwenpaw.agentscope.io/docs/channels/?lang=en#iMessage-macOS-only",
+  discord: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#Discord",
+  qq: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#QQ",
+  telegram: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#Telegram",
+  mqtt: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#MQTT",
+  mattermost: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#Mattermost",
+  matrix: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#Matrix",
+  sip: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#SIP",
+  wecom:
+    "https://qwenpaw.agentscope.io/docs/channels/?lang=en#WeCom-WeChat-Work",
+  wechat:
+    "https://qwenpaw.agentscope.io/docs/channels/?lang=en#WeChat-Personal-iLink",
   xiaoyi:
     "https://developer.huawei.com/consumer/cn/doc/service/openclaw-0000002518410344",
+  yuanbao: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#Yuanbao",
+  onebot:
+    "https://qwenpaw.agentscope.io/docs/channels/?lang=en#OneBot-v11-NapCat--QQ-full-protocol",
+  slack: "https://qwenpaw.agentscope.io/docs/channels/?lang=en#Slack",
 };
 
-// Doc ZH URLs per channel (anchors on https://copaw.agentscope.io/docs/channels)
+// Doc ZH URLs per channel (anchors on https://qwenpaw.agentscope.io/docs/channels)
 const CHANNEL_DOC_ZH_URLS: Partial<Record<ChannelKey, string>> = {
-  dingtalk: "https://copaw.agentscope.io/docs/channels/?lang=zh#钉钉推荐",
-  feishu: "https://copaw.agentscope.io/docs/channels/?lang=zh#飞书",
+  dingtalk: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#钉钉推荐",
+  feishu: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#飞书",
   imessage:
-    "https://copaw.agentscope.io/docs/channels/?lang=zh#iMessage仅-macOS",
-  discord: "https://copaw.agentscope.io/docs/channels/?lang=zh#Discord",
-  qq: "https://copaw.agentscope.io/docs/channels/?lang=zh#QQ",
-  telegram: "https://copaw.agentscope.io/docs/channels/?lang=zh#Telegram",
-  mqtt: "https://copaw.agentscope.io/docs/channels/?lang=zh#MQTT",
-  mattermost: "https://copaw.agentscope.io/docs/channels/?lang=zh#Mattermost",
-  matrix: "https://copaw.agentscope.io/docs/channels/?lang=zh#Matrix",
-  wecom: "https://copaw.agentscope.io/docs/channels/?lang=zh#企业微信",
+    "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#iMessage仅-macOS",
+  discord: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#Discord",
+  qq: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#QQ",
+  telegram: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#Telegram",
+  mqtt: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#MQTT",
+  mattermost: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#Mattermost",
+  matrix: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#Matrix",
+  sip: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#SIP",
+  wecom: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#企业微信",
+  wechat: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#微信个人iLink",
   xiaoyi:
     "https://developer.huawei.com/consumer/cn/doc/service/openclaw-0000002518410344",
+  yuanbao:
+    "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#腾讯元宝Yuanbao",
+  onebot:
+    "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#OneBot-v11NapCat--QQ-完整协议",
+  slack: "https://qwenpaw.agentscope.io/docs/channels/?lang=zh#Slack",
 };
 
 const TWILIO_CONSOLE_URL = "https://console.twilio.com";
@@ -95,10 +93,51 @@ const TWILIO_CONSOLE_URL = "https://console.twilio.com";
 const BASE_FIELDS = [
   "enabled",
   "bot_prefix",
-  "filter_tool_messages",
-  "filter_thinking",
+  "show_tool_calls",
+  "show_tool_results",
+  "tool_call_max_length",
+  "tool_result_max_length",
+  "show_thinking",
   "isBuiltin",
 ];
+
+// Resolve a plugin-provided localized text (a plain string or a
+// locale->string dict) against the given UI language, with graceful
+// fallback so a missing locale never renders blank. Long codes ("zh-CN")
+// and short codes ("zh") are matched on either side via prefix matching.
+// Priority: exact locale -> short code -> prefix match (short<->long) ->
+// English -> Chinese -> first non-empty value.
+function resolveLocalized(value: unknown, lang: string): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value !== "object") return String(value);
+
+  const dict = value as Record<string, string>;
+  const locale = lang || "en";
+  const short = locale.split("-")[0].toLowerCase();
+  // Prefix match so UI short code "zh" hits dict long key "zh-CN"
+  // (and vice versa), regardless of which style the plugin used.
+  const prefixKey = Object.keys(dict).find(
+    (k) => k.split("-")[0].toLowerCase() === short && !!dict[k],
+  );
+
+  const exactMatch = dict[locale];
+  const shortMatch = dict[short];
+  const prefixMatch = prefixKey ? dict[prefixKey] : undefined;
+  const englishFallback = dict["en-US"] || dict["en"];
+  const chineseFallback = dict["zh-CN"] || dict["zh"];
+  const anyNonEmpty = Object.values(dict).find((v) => !!v);
+
+  return (
+    exactMatch ||
+    shortMatch ||
+    prefixMatch ||
+    englishFallback ||
+    chineseFallback ||
+    anyNonEmpty ||
+    ""
+  );
+}
 
 interface ChannelDrawerProps {
   open: boolean;
@@ -108,6 +147,7 @@ interface ChannelDrawerProps {
   saving: boolean;
   initialValues: Record<string, unknown> | undefined;
   isBuiltin: boolean;
+  channelSchema?: ChannelSchema;
   onClose: () => void;
   onSubmit: (values: Record<string, unknown>) => void;
 }
@@ -120,103 +160,61 @@ export function ChannelDrawer({
   saving,
   initialValues,
   isBuiltin,
+  channelSchema,
   onClose,
   onSubmit,
 }: ChannelDrawerProps) {
   const { t, i18n } = useTranslation();
-  const { isDark } = useTheme();
+  const { selectedAgent, agents } = useAgentStore();
+  const currentAgent = agents.find((a) => a.id === selectedAgent);
+  const defaultMediaDir = currentAgent?.workspace_dir
+    ? `${currentAgent.workspace_dir}/media`
+    : "~/.qwenpaw/media";
   const currentLang = i18n.language?.startsWith("zh") ? "zh" : "en";
-  const label = activeKey ? getChannelLabel(activeKey) : activeLabel;
-  const sdkLoadedRef = useRef(false);
+  const label = activeKey ? getChannelLabel(activeKey, t) : activeLabel;
+  const { message } = useAppMessage();
+  const matrixAuthMethod = Form.useWatch("auth_method", form);
+  const isMatrixPasswordAuth = matrixAuthMethod === "password";
+  const feishuDomain = (Form.useWatch("domain", form) as string) || "feishu";
+  const showToolCalls = Form.useWatch("show_tool_calls", form) ?? true;
+  const showToolResults = Form.useWatch("show_tool_results", form) ?? true;
+  const onebotMediaBase64 = Form.useWatch("media_base64", form) ?? false;
+  const onebotWsHost = (Form.useWatch("ws_host", form) as string) ?? "";
+  // The backend falls back to loopback when ws_host is blank, and rejects
+  // every connection on a network-reachable host until a token is set.
+  const onebotTokenRequired = !isLoopbackHost(
+    onebotWsHost.trim() || "127.0.0.1",
+  );
 
-  // Dynamically load the WeCom SDK script
-  const loadWecomSDK = useCallback((): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (window.WecomAIBotSDK || sdkLoadedRef.current) {
-        resolve();
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = WECOM_SDK_URL;
-      script.async = true;
-      script.onload = () => {
-        sdkLoadedRef.current = true;
-        resolve();
-      };
-      script.onerror = () => reject(new Error("Failed to load WeCom SDK"));
-      document.body.appendChild(script);
-    });
-  }, []);
-
-  // Handle WeCom scan-to-authorize button click; source is fixed to WECOM_SOURCE
-  const handleWecomAuth = useCallback(async () => {
-    try {
-      await loadWecomSDK();
-    } catch {
-      message.error(t("channels.wecomSdkLoadFailed"));
-      return;
+  // Parent calls form.setFieldsValue() before the Form mounts, which wins over
+  // initialValues. Re-apply auth_method after open so the dropdown is correct.
+  useEffect(() => {
+    if (!open || activeKey !== "matrix") return;
+    const pw = initialValues?.password;
+    if (typeof pw === "string" && pw.trim().length > 0) {
+      form.setFieldsValue({ auth_method: "password" });
     }
-    if (!window.WecomAIBotSDK) {
-      message.error(t("channels.wecomSdkLoadFailed"));
-      return;
-    }
-    const result = window.WecomAIBotSDK.openBotInfoAuthWindow({
-      source: WECOM_SOURCE,
-    });
-    if (result && typeof result.then === "function") {
-      result.then(
-        (bot) => {
-          if (bot?.botid) {
-            form.setFieldsValue({ bot_id: bot.botid, secret: bot.secret });
-            message.success(t("channels.wecomAuthSuccess"));
-          }
-        },
-        (error: WecomAuthError) => {
-          if (error?.code === "WINDOW_BLOCKED") {
-            message.error(t("channels.wecomWindowBlocked"));
-          } else if (error?.code === "CANCELLED") {
-            message.info(t("channels.wecomCancelled"));
-          } else {
-            message.error(
-              t("channels.wecomAuthFailed", {
-                msg: error?.message || error?.code || "Unknown error",
-              }),
-            );
-          }
-        },
-      );
-    }
-  }, [loadWecomSDK, form, t]);
+  }, [open, activeKey, initialValues, form]);
 
   // ── Access control fields (shared across multiple channels) ──────────────
 
   const renderAccessControlFields = () => (
     <>
       <Form.Item
-        name="dm_policy"
-        label={t("channels.dmPolicy")}
-        tooltip={t("channels.dmPolicyTooltip")}
-        initialValue="open"
+        name="access_control_dm"
+        label={t("channels.accessControlDm")}
+        valuePropName="checked"
+        tooltip={t("channels.accessControlDmTooltip")}
       >
-        <Select
-          options={[
-            { value: "open", label: t("channels.policyOpen") },
-            { value: "allowlist", label: t("channels.policyAllowlist") },
-          ]}
-        />
+        <Switch />
       </Form.Item>
       <Form.Item
-        name="group_policy"
-        label={t("channels.groupPolicy")}
-        tooltip={t("channels.groupPolicyTooltip")}
-        initialValue="open"
+        name="access_control_group"
+        label={t("channels.accessControlGroup")}
+        valuePropName="checked"
+        tooltip={t("channels.accessControlGroupTooltip")}
       >
-        <Select
-          options={[
-            { value: "open", label: t("channels.policyOpen") },
-            { value: "allowlist", label: t("channels.policyAllowlist") },
-          ]}
-        />
+        <Switch />
       </Form.Item>
       <Form.Item
         name="require_mention"
@@ -225,18 +223,6 @@ export function ChannelDrawer({
         tooltip={t("channels.requireMentionTooltip")}
       >
         <Switch />
-      </Form.Item>
-      <Form.Item
-        name="allow_from"
-        label={t("channels.allowFrom")}
-        tooltip={t("channels.allowFromTooltip")}
-        initialValue={[]}
-      >
-        <Select
-          mode="tags"
-          placeholder={t("channels.allowFromPlaceholder")}
-          tokenSeparators={[","]}
-        />
       </Form.Item>
     </>
   );
@@ -258,16 +244,88 @@ export function ChannelDrawer({
             <Form.Item
               name="user_id"
               label="User ID"
-              rules={[{ required: true }]}
+              tooltip="Accepts a full MXID (e.g. @bot:matrix.org) or just the localpart (e.g. bot)."
+              rules={[{ required: true, message: "Please enter User ID" }]}
             >
               <Input placeholder="@bot:matrix.org" />
             </Form.Item>
             <Form.Item
+              name="auth_method"
+              label="Auth Method"
+              initialValue="token"
+            >
+              <Select
+                options={[
+                  { value: "token", label: "Token" },
+                  { value: "password", label: "Password" },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item
               name="access_token"
               label="Access Token"
-              rules={[{ required: true }]}
+              rules={[
+                {
+                  required: !isMatrixPasswordAuth,
+                  message: "Please enter access token",
+                },
+              ]}
+              hidden={isMatrixPasswordAuth}
             >
               <Input.Password placeholder="syt_..." />
+            </Form.Item>
+            <Form.Item
+              name="password"
+              label="Password"
+              rules={[
+                {
+                  required: isMatrixPasswordAuth,
+                  message: "Please enter password",
+                },
+              ]}
+              hidden={!isMatrixPasswordAuth}
+            >
+              <Input.Password placeholder="Account password for login" />
+            </Form.Item>
+            <Form.Item
+              name="encryption"
+              label="Enable End-to-End Encryption"
+              tooltip="After enabling, you must verify the device in a Matrix client (e.g. Element). E2EE requires manually installing matrix-nio[e2e] (pip install matrix-nio[e2e])."
+              valuePropName="checked"
+              hidden={!isMatrixPasswordAuth}
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              name="device_name"
+              label="Device Name"
+              tooltip="A stable device identity for the Matrix client. Defaults to 'qwenpaw-worker' if left empty."
+            >
+              <Input placeholder="qwenpaw-worker" />
+            </Form.Item>
+            <Form.Item
+              name="dm_disabled"
+              label={t("channels.dmDisabled")}
+              valuePropName="checked"
+              tooltip={t("channels.dmDisabledTooltip")}
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              name="group_disabled"
+              label={t("channels.groupDisabled")}
+              valuePropName="checked"
+              tooltip={t("channels.groupDisabledTooltip")}
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              name="share_session_in_group"
+              label={t("channels.shareSessionInGroup")}
+              valuePropName="checked"
+              tooltip={t("channels.shareSessionInGroupTooltip")}
+            >
+              <Switch />
             </Form.Item>
           </>
         );
@@ -310,18 +368,61 @@ export function ChannelDrawer({
             <Form.Item name="http_proxy_auth" label="HTTP Proxy Auth">
               <Input placeholder="user:password" />
             </Form.Item>
+            <Form.Item
+              name="accept_bot_messages"
+              label={t("channels.acceptBotMessages")}
+              valuePropName="checked"
+              tooltip={t("channels.acceptBotMessagesTooltip")}
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item name="media_dir" label={t("channels.wechatMediaDir")}>
+              <Input placeholder={defaultMediaDir} />
+            </Form.Item>
           </>
         );
 
       case "dingtalk":
         return (
           <>
+            <ConfigProvider prefixCls="ant">
+              <Alert
+                type="info"
+                showIcon
+                message={t("channels.dingtalkSetupGuide")}
+                style={{ marginBottom: 16 }}
+              />
+            </ConfigProvider>
+            <QrcodeAuthBlock
+              label={t("channels.dingtalkScanAuth")}
+              buttonText={t("channels.dingtalkGetQrcode")}
+              imageAlt="DingTalk QR Code"
+              hintText={t("channels.dingtalkScanHint")}
+              channel="dingtalk"
+              successStatus="success"
+              successCredentialKey="client_id"
+              pollInterval={5000}
+              onSuccess={(credentials) => {
+                form.setFieldsValue({
+                  client_id: credentials.client_id,
+                  client_secret: credentials.client_secret,
+                });
+                message.success(t("channels.dingtalkAuthSuccess"));
+              }}
+              onError={(type) => {
+                if (type === "expired") {
+                  message.warning(t("channels.dingtalkQrcodeExpired"));
+                } else {
+                  message.error(t("channels.dingtalkQrcodeFailed"));
+                }
+              }}
+            />
             <Form.Item
               name="client_id"
               label="Client ID"
               rules={[{ required: true }]}
             >
-              <Input />
+              <Input placeholder="dingxxxxx" />
             </Form.Item>
             <Form.Item
               name="client_secret"
@@ -343,13 +444,29 @@ export function ChannelDrawer({
               />
             </Form.Item>
             <Form.Item
+              name="cron_message_type"
+              label="Cron Message Type"
+              tooltip="Message type for cron/scheduled task sends. Independent from the chat message type above."
+            >
+              <Select
+                options={[
+                  { label: "markdown", value: "markdown" },
+                  { label: "card", value: "card" },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item
               noStyle
               shouldUpdate={(prev, cur) =>
-                prev.message_type !== cur.message_type
+                prev.message_type !== cur.message_type ||
+                prev.cron_message_type !== cur.cron_message_type
               }
             >
               {({ getFieldValue }) => {
-                if (getFieldValue("message_type") !== "card") return null;
+                const needsCard =
+                  getFieldValue("message_type") === "card" ||
+                  getFieldValue("cron_message_type") === "card";
+                if (!needsCard) return null;
                 return (
                   <>
                     <Form.Item
@@ -373,15 +490,46 @@ export function ChannelDrawer({
                       <Input placeholder="content" />
                     </Form.Item>
                     <Form.Item
-                      name="robot_code"
-                      label="Robot Code"
-                      tooltip="Recommended to configure explicitly for group chats"
+                      name="card_auto_layout"
+                      label={t("channels.cardAutoLayout")}
+                      tooltip={t("channels.cardAutoLayoutTooltip")}
+                      valuePropName="checked"
                     >
-                      <Input placeholder="robot code (default client_id)" />
+                      <Switch />
                     </Form.Item>
                   </>
                 );
               }}
+            </Form.Item>
+            <Form.Item
+              name="robot_code"
+              label="Robot Code"
+              tooltip="Recommended to configure explicitly for group chats"
+            >
+              <Input placeholder="robot code (default client_id)" />
+            </Form.Item>
+            <Form.Item
+              name="endpoint"
+              label={t("channels.dingtalkEndpoint")}
+              tooltip={t("channels.dingtalkEndpointTooltip")}
+            >
+              <Input placeholder="https://api.dingtalk.com" />
+            </Form.Item>
+            <Form.Item
+              name="at_sender_on_reply"
+              label={t("channels.atSenderOnReply")}
+              tooltip={t("channels.atSenderOnReplyTooltip")}
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              name="share_session_in_group"
+              label={t("channels.shareSessionInGroup")}
+              valuePropName="checked"
+              tooltip={t("channels.shareSessionInGroupTooltip")}
+            >
+              <Switch />
             </Form.Item>
           </>
         );
@@ -404,6 +552,39 @@ export function ChannelDrawer({
                 </Select.Option>
               </Select>
             </Form.Item>
+            <ConfigProvider prefixCls="ant">
+              <Alert
+                type="info"
+                showIcon
+                message={t("channels.feishuScanGuide")}
+                style={{ marginBottom: 16 }}
+              />
+            </ConfigProvider>
+            <QrcodeAuthBlock
+              label={t("channels.feishuScanLogin")}
+              buttonText={t("channels.feishuGetQrcode")}
+              imageAlt="Feishu QR Code"
+              hintText={t("channels.feishuScanHint")}
+              channel="feishu"
+              successStatus="success"
+              successCredentialKey="app_id"
+              pollInterval={2000}
+              params={{ domain: feishuDomain }}
+              onSuccess={(credentials) => {
+                form.setFieldsValue({
+                  app_id: credentials.app_id,
+                  app_secret: credentials.app_secret,
+                });
+                message.success(t("channels.feishuAuthSuccess"));
+              }}
+              onError={(type) => {
+                if (type === "expired") {
+                  message.warning(t("channels.feishuQrcodeExpired"));
+                } else {
+                  message.error(t("channels.feishuQrcodeFailed"));
+                }
+              }}
+            />
             <Form.Item
               name="app_id"
               label="App ID"
@@ -424,8 +605,16 @@ export function ChannelDrawer({
             <Form.Item name="verification_token" label="Verification Token">
               <Input placeholder="Optional" />
             </Form.Item>
-            <Form.Item name="media_dir" label="Media Dir">
-              <Input placeholder="~/.copaw/media" />
+            <Form.Item name="media_dir" label={t("channels.wechatMediaDir")}>
+              <Input placeholder={defaultMediaDir} />
+            </Form.Item>
+            <Form.Item
+              name="share_session_in_group"
+              label={t("channels.shareSessionInGroup")}
+              valuePropName="checked"
+              tooltip={t("channels.shareSessionInGroupTooltip")}
+            >
+              <Switch />
             </Form.Item>
           </>
         );
@@ -433,6 +622,41 @@ export function ChannelDrawer({
       case "qq":
         return (
           <>
+            <ConfigProvider prefixCls="ant">
+              <Alert
+                type="info"
+                showIcon
+                message={t("channels.qqSetupGuide")}
+                style={{ marginBottom: 16 }}
+              />
+            </ConfigProvider>
+            <QrcodeAuthBlock
+              label={t("channels.qqScanAuth")}
+              buttonText={t("channels.qqGetQrcode")}
+              imageAlt="QQ QR Code"
+              hintText={t("channels.qqScanHint")}
+              channel="qq"
+              successStatus="success"
+              successCredentialKey="app_id"
+              pollInterval={2000}
+              pollTimeout={300000}
+              maxPollCount={180}
+              onSuccess={(credentials) => {
+                form.setFieldsValue({
+                  app_id: credentials.app_id,
+                  client_secret: credentials.client_secret,
+                  user_openid: credentials.user_openid,
+                });
+                message.success(t("channels.qqAuthSuccess"));
+              }}
+              onError={(type) => {
+                if (type === "expired") {
+                  message.warning(t("channels.qqQrcodeExpired"));
+                } else {
+                  message.error(t("channels.qqQrcodeFailed"));
+                }
+              }}
+            />
             <Form.Item
               name="app_id"
               label="App ID"
@@ -447,6 +671,16 @@ export function ChannelDrawer({
             >
               <Input.Password />
             </Form.Item>
+            <Form.Item name="user_openid" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="ack_message"
+              label={t("channels.ackMessage")}
+              tooltip={t("channels.ackMessageTooltip")}
+            >
+              <Input placeholder={t("channels.ackMessagePlaceholder")} />
+            </Form.Item>
           </>
         );
 
@@ -460,6 +694,9 @@ export function ChannelDrawer({
             >
               <Input.Password placeholder="Telegram bot token from BotFather" />
             </Form.Item>
+            <Form.Item name="base_url" label="API Base URL">
+              <Input placeholder="https://tg-api.yourdomain.com" />
+            </Form.Item>
             <Form.Item name="http_proxy" label="HTTP Proxy">
               <Input placeholder="http://127.0.0.1:18118" />
             </Form.Item>
@@ -472,6 +709,35 @@ export function ChannelDrawer({
               valuePropName="checked"
             >
               <Switch />
+            </Form.Item>
+          </>
+        );
+
+      case "slack":
+        return (
+          <>
+            <Form.Item
+              name="bot_token"
+              label="Bot Token"
+              rules={[{ required: true }]}
+              tooltip={t("channels.slackBotTokenTooltip")}
+            >
+              <Input.Password placeholder="xoxb-..." />
+            </Form.Item>
+            <Form.Item
+              name="app_token"
+              label="App Token"
+              rules={[{ required: true }]}
+              tooltip={t("channels.slackAppTokenTooltip")}
+            >
+              <Input.Password placeholder="xapp-..." />
+            </Form.Item>
+            <Form.Item
+              name="proxy"
+              label="HTTP Proxy"
+              tooltip={t("channels.slackProxyTooltip")}
+            >
+              <Input placeholder="http://127.0.0.1:18118" />
             </Form.Item>
           </>
         );
@@ -594,8 +860,8 @@ export function ChannelDrawer({
             >
               <Input.Password placeholder="Mattermost bot token" />
             </Form.Item>
-            <Form.Item name="media_dir" label="Media Dir">
-              <Input placeholder="~/.copaw/media/mattermost" />
+            <Form.Item name="media_dir" label={t("channels.wechatMediaDir")}>
+              <Input placeholder={defaultMediaDir} />
             </Form.Item>
             <Form.Item
               name="show_typing"
@@ -670,24 +936,195 @@ export function ChannelDrawer({
           </>
         );
 
+      case "sip":
+        return (
+          <>
+            <ConfigProvider prefixCls="ant">
+              <Alert
+                type="info"
+                showIcon
+                message={t("channels.sipSetupGuide")}
+                style={{ marginBottom: 16 }}
+              />
+            </ConfigProvider>
+            <Form.Item
+              name="sip_mode"
+              label={t("channels.sipMode")}
+              tooltip={t("channels.sipModeTooltip")}
+              initialValue="dev"
+            >
+              <Select
+                options={[
+                  { value: "dev", label: "Dev (pyVoIP)" },
+                  { value: "livekit", label: "Production (LiveKit)" },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item
+              shouldUpdate={(
+                prev: Record<string, unknown>,
+                cur: Record<string, unknown>,
+              ) => prev.sip_mode !== cur.sip_mode}
+              noStyle
+            >
+              {({
+                getFieldValue,
+              }: {
+                getFieldValue: (name: string) => unknown;
+              }) => (
+                <Form.Item name="sip_server" label={t("channels.sipServer")}>
+                  <Input
+                    placeholder={
+                      getFieldValue("sip_mode") === "livekit"
+                        ? t("channels.sipServerPlaceholderLivekit")
+                        : t("channels.sipServerPlaceholder")
+                    }
+                  />
+                </Form.Item>
+              )}
+            </Form.Item>
+            <Form.Item name="sip_username" label={t("channels.sipUsername")}>
+              <Input placeholder="1001" />
+            </Form.Item>
+            <Form.Item name="sip_password" label={t("channels.sipPassword")}>
+              <Input.Password />
+            </Form.Item>
+            <Form.Item
+              name="sip_port"
+              label={t("channels.sipPort")}
+              rules={[
+                {
+                  type: "number",
+                  min: 1,
+                  max: 65535,
+                },
+              ]}
+            >
+              <InputNumber
+                min={1}
+                max={65535}
+                style={{ width: "100%" }}
+                placeholder="5061"
+              />
+            </Form.Item>
+            <Form.Item
+              name="sip_transport"
+              label={t("channels.sipTransport")}
+              initialValue="UDP"
+            >
+              <Select
+                options={[
+                  { value: "UDP", label: "UDP" },
+                  { value: "TCP", label: "TCP" },
+                  { value: "TLS", label: "TLS" },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item
+              name="dashscope_api_key"
+              label={t("channels.sipDashscopeApiKey")}
+              tooltip={t("channels.sipDashscopeApiKeyTooltip")}
+            >
+              <Input.Password placeholder="sk-..." />
+            </Form.Item>
+            <Form.Item name="tts_provider" label={t("channels.ttsProvider")}>
+              <Input placeholder="aliyun" />
+            </Form.Item>
+            <Form.Item name="tts_voice" label={t("channels.ttsVoice")}>
+              <Input placeholder="longxiaochun" />
+            </Form.Item>
+            <Form.Item name="stt_provider" label={t("channels.sttProvider")}>
+              <Input placeholder="aliyun" />
+            </Form.Item>
+            <Form.Item name="language" label={t("channels.language")}>
+              <Input placeholder="zh-CN" />
+            </Form.Item>
+            <Form.Item
+              name="welcome_greeting"
+              label={t("channels.welcomeGreeting")}
+            >
+              <Input.TextArea rows={2} />
+            </Form.Item>
+            <Form.Item
+              noStyle
+              shouldUpdate={(prev, cur) => prev.sip_mode !== cur.sip_mode}
+            >
+              {({ getFieldValue }) => {
+                if (getFieldValue("sip_mode") !== "livekit") return null;
+                return (
+                  <>
+                    <Form.Item
+                      name="livekit_url"
+                      label={t("channels.livekitUrl")}
+                      rules={[{ required: true }]}
+                    >
+                      <Input placeholder="ws://localhost:7880" />
+                    </Form.Item>
+                    <Form.Item
+                      name="livekit_api_key"
+                      label={t("channels.livekitApiKey")}
+                      rules={[{ required: true }]}
+                    >
+                      <Input />
+                    </Form.Item>
+                    <Form.Item
+                      name="livekit_api_secret"
+                      label={t("channels.livekitApiSecret")}
+                      rules={[{ required: true }]}
+                    >
+                      <Input.Password />
+                    </Form.Item>
+                    <Form.Item
+                      name="livekit_sip_trunk_id"
+                      label={t("channels.livekitSipTrunkId")}
+                    >
+                      <Input placeholder="ST_xxxx" />
+                    </Form.Item>
+                    <Form.Item
+                      name="livekit_room_name"
+                      label={t("channels.livekitRoomName")}
+                      tooltip={t("channels.livekitRoomNameTooltip")}
+                    >
+                      <Input placeholder="sip-inbound" />
+                    </Form.Item>
+                  </>
+                );
+              }}
+            </Form.Item>
+          </>
+        );
+
       case "wecom":
         return (
           <>
-            <Form.Item label=" " colon={false}>
-              <span
-                style={{
-                  display: "block",
-                  marginBottom: 8,
-                  fontSize: 13,
-                  color: isDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.45)",
-                }}
-              >
-                {t("channels.wecomAuthHint")}
-              </span>
-              <Button type="primary" block onClick={handleWecomAuth}>
-                {t("channels.loginWeCom")}
-              </Button>
-            </Form.Item>
+            <ConfigProvider prefixCls="ant">
+              <Alert
+                type="warning"
+                showIcon
+                message={t("channels.wecomSetupGuide")}
+                style={{ marginBottom: 16 }}
+              />
+            </ConfigProvider>
+            <QrcodeAuthBlock
+              label={t("channels.wecomScanAuth")}
+              buttonText={t("channels.loginWeCom")}
+              imageAlt="WeCom QR Code"
+              hintText={t("channels.wecomAuthHint")}
+              channel="wecom"
+              successStatus="success"
+              successCredentialKey="bot_id"
+              pollInterval={3000}
+              onSuccess={(credentials) => {
+                form.setFieldsValue({
+                  bot_id: credentials.bot_id,
+                  secret: credentials.secret,
+                });
+                message.success(t("channels.wecomAuthSuccess"));
+              }}
+              onError={() => {
+                message.error(t("channels.wecomQrcodeFailed"));
+              }}
+            />
             <Form.Item
               name="bot_id"
               label="Bot ID"
@@ -702,8 +1139,8 @@ export function ChannelDrawer({
             >
               <Input.Password placeholder="Secret from WeCom backend" />
             </Form.Item>
-            <Form.Item name="media_dir" label="Media Dir">
-              <Input placeholder="~/.copaw/media" />
+            <Form.Item name="media_dir" label={t("channels.wechatMediaDir")}>
+              <Input placeholder={defaultMediaDir} />
             </Form.Item>
             <Form.Item
               name="welcome_text"
@@ -711,6 +1148,14 @@ export function ChannelDrawer({
               tooltip={t("channels.welcomeTextTooltip")}
             >
               <Input placeholder={t("channels.welcomeTextPlaceholder")} />
+            </Form.Item>
+            <Form.Item
+              name="share_session_in_group"
+              label={t("channels.shareSessionInGroup")}
+              valuePropName="checked"
+              tooltip={t("channels.shareSessionInGroupTooltip")}
+            >
+              <Switch />
             </Form.Item>
           </>
         );
@@ -747,8 +1192,281 @@ export function ChannelDrawer({
             >
               <Input placeholder="Agent ID from XiaoYi platform" />
             </Form.Item>
-            <Form.Item name="ws_url" label="WebSocket URL">
-              <Input placeholder="wss://hag.cloud.huawei.com/openclaw/v1/ws/link" />
+          </>
+        );
+
+      case "wechat":
+        return (
+          <>
+            <ConfigProvider prefixCls="ant">
+              <Alert
+                type="info"
+                showIcon
+                message={t("channels.wechatSetupGuide")}
+                style={{ marginBottom: 16 }}
+              />
+              <Alert
+                type="warning"
+                showIcon
+                message={t("channels.wechatContextTokenLimit")}
+                style={{ marginBottom: 16 }}
+              />
+            </ConfigProvider>
+            <QrcodeAuthBlock
+              label={t("channels.wechatScanLogin")}
+              buttonText={t("channels.wechatGetQrcode")}
+              imageAlt="WeChat QR Code"
+              hintText={t("channels.wechatScanHint")}
+              channel="wechat"
+              successStatus="confirmed"
+              successCredentialKey="bot_token"
+              pollInterval={2000}
+              onSuccess={(credentials) => {
+                form.setFieldsValue({ bot_token: credentials.bot_token });
+                message.success(t("channels.wechatLoginSuccess"));
+              }}
+              onError={(type) => {
+                if (type === "expired") {
+                  message.warning(t("channels.wechatQrcodeExpired"));
+                } else {
+                  message.error(t("channels.wechatQrcodeFailed"));
+                }
+              }}
+            />
+            <Form.Item
+              name="bot_token"
+              label={t("channels.wechatBotToken")}
+              tooltip={t("channels.wechatBotTokenTooltip")}
+            >
+              <Input.Password
+                placeholder={t("channels.wechatBotTokenPlaceholder")}
+              />
+            </Form.Item>
+            <Form.Item
+              name="bot_token_file"
+              label={t("channels.wechatBotTokenFile")}
+              tooltip={t("channels.wechatBotTokenFileTooltip")}
+            >
+              <Input placeholder="~/.qwenpaw/wechat_bot_token" />
+            </Form.Item>
+            <Form.Item name="media_dir" label={t("channels.wechatMediaDir")}>
+              <Input placeholder={defaultMediaDir} />
+            </Form.Item>
+            <Form.Item
+              name="message_merge_enabled"
+              label={t("channels.wechatMessageMerge")}
+              valuePropName="checked"
+              tooltip={t("channels.wechatMessageMergeTooltip")}
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              noStyle
+              shouldUpdate={(prev, cur) =>
+                prev.message_merge_enabled !== cur.message_merge_enabled
+              }
+            >
+              {({ getFieldValue }) =>
+                getFieldValue("message_merge_enabled") ? (
+                  <Form.Item
+                    name="message_merge_delay_ms"
+                    label={t("channels.wechatMessageMergeDelayMs")}
+                    tooltip={t("channels.wechatMessageMergeDelayMsTooltip")}
+                    initialValue={0}
+                    rules={[
+                      {
+                        validator: (_: unknown, value: unknown) => {
+                          if (
+                            value === null ||
+                            value === undefined ||
+                            value === ""
+                          ) {
+                            return Promise.resolve();
+                          }
+                          const num = Number(value);
+                          if (!Number.isInteger(num) || num < 0) {
+                            return Promise.reject(
+                              new Error(
+                                t(
+                                  "channels.wechatMessageMergeDelayMsValidation",
+                                ),
+                              ),
+                            );
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      min={0}
+                      step={100}
+                      style={{ width: "100%" }}
+                      placeholder="0"
+                    />
+                  </Form.Item>
+                ) : null
+              }
+            </Form.Item>
+          </>
+        );
+
+      case "yuanbao":
+        return (
+          <>
+            <Form.Item
+              name="app_id"
+              label="App ID"
+              rules={[{ required: true, message: "Please input App ID" }]}
+            >
+              <Input placeholder="App ID from Yuanbao platform" />
+            </Form.Item>
+            <Form.Item
+              name="app_secret"
+              label="App Secret"
+              rules={[{ required: true, message: "Please input App Secret" }]}
+            >
+              <Input.Password placeholder="App Secret from Yuanbao platform" />
+            </Form.Item>
+            <Form.Item
+              name="api_domain"
+              label="API Domain"
+              tooltip="REST API domain for sign-token auth (default: bot.yuanbao.tencent.com)"
+            >
+              <Input placeholder="bot.yuanbao.tencent.com" />
+            </Form.Item>
+            <Form.Item name="media_dir" label={t("channels.wechatMediaDir")}>
+              <Input placeholder={defaultMediaDir} />
+            </Form.Item>
+            <Form.Item
+              name="accept_bot_messages"
+              label={t("channels.acceptBotMessages")}
+              valuePropName="checked"
+              tooltip={t("channels.acceptBotMessagesTooltip")}
+            >
+              <Switch />
+            </Form.Item>
+          </>
+        );
+
+      case "onebot":
+        return (
+          <>
+            <Form.Item
+              name="ws_host"
+              label="WebSocket Host"
+              tooltip={t("channels.onebotWsHostTooltip")}
+            >
+              <Input placeholder="127.0.0.1" />
+            </Form.Item>
+            <Form.Item
+              name="ws_port"
+              label="WebSocket Port"
+              rules={[
+                { required: true },
+                {
+                  type: "number",
+                  min: 1,
+                  max: 65535,
+                  message: "Port must be between 1 and 65535",
+                },
+              ]}
+            >
+              <InputNumber
+                min={1}
+                max={65535}
+                style={{ width: "100%" }}
+                placeholder="6199"
+              />
+            </Form.Item>
+            <Form.Item
+              name="access_token"
+              label="Access Token"
+              tooltip={t("channels.onebotAccessTokenTooltip")}
+              rules={
+                onebotTokenRequired
+                  ? [
+                      {
+                        required: true,
+                        whitespace: true,
+                        message: t("channels.onebotAccessTokenRequired"),
+                      },
+                    ]
+                  : []
+              }
+            >
+              <Input.Password placeholder="Access token for authentication" />
+            </Form.Item>
+            <Form.Item
+              name="media_dir"
+              label={t("channels.onebotMediaDir")}
+              tooltip={t("channels.onebotMediaDirTooltip")}
+            >
+              <Input placeholder={defaultMediaDir} />
+            </Form.Item>
+            <Form.Item
+              name="media_download_max_mb"
+              label={t("channels.onebotMediaDownloadMaxMb")}
+              tooltip={t("channels.onebotMediaDownloadMaxMbTooltip")}
+              rules={[
+                {
+                  required: true,
+                  message: t("channels.onebotMediaDownloadMaxMbRequired"),
+                },
+                {
+                  type: "number",
+                  min: 1,
+                  message: t("channels.onebotMediaDownloadMaxMbMin"),
+                },
+              ]}
+            >
+              <InputNumber
+                min={1}
+                precision={0}
+                style={{ width: "100%" }}
+                addonAfter="MB"
+              />
+            </Form.Item>
+            <Form.Item
+              name="media_base64"
+              label={t("channels.onebotMediaBase64")}
+              valuePropName="checked"
+              tooltip={t("channels.onebotMediaBase64Tooltip")}
+            >
+              <Switch />
+            </Form.Item>
+            {onebotMediaBase64 && (
+              <Form.Item
+                name="media_base64_max_mb"
+                label={t("channels.onebotMediaBase64MaxMb")}
+                tooltip={t("channels.onebotMediaBase64MaxMbTooltip")}
+                rules={[
+                  {
+                    required: true,
+                    message: t("channels.onebotMediaBase64MaxMbRequired"),
+                  },
+                  {
+                    type: "number",
+                    min: 1,
+                    message: t("channels.onebotMediaBase64MaxMbMin"),
+                  },
+                ]}
+              >
+                <InputNumber
+                  min={1}
+                  precision={0}
+                  style={{ width: "100%" }}
+                  addonAfter="MB"
+                />
+              </Form.Item>
+            )}
+            <Form.Item
+              name="share_session_in_group"
+              label={t("channels.shareSessionInGroup")}
+              valuePropName="checked"
+              tooltip={t("channels.shareSessionInGroupTooltip")}
+            >
+              <Switch />
             </Form.Item>
           </>
         );
@@ -763,6 +1481,109 @@ export function ChannelDrawer({
   const renderCustomExtraFields = (
     values: Record<string, unknown> | undefined,
   ) => {
+    // If we have a schema from the plugin system, render based on it
+    if (channelSchema && channelSchema.config_fields.length > 0) {
+      return (
+        <>
+          {channelSchema.description && (
+            <div className={styles.schemaDescription}>
+              {channelSchema.description}
+            </div>
+          )}
+          {channelSchema.config_fields.map((field) => {
+            const fieldLabel = resolveLocalized(field.label, i18n.language);
+            const fieldHelp =
+              resolveLocalized(field.help, i18n.language) || undefined;
+            const fieldPlaceholder = resolveLocalized(
+              field.placeholder,
+              i18n.language,
+            );
+            const rules = field.required
+              ? [{ required: true, message: `Please enter ${fieldLabel}` }]
+              : undefined;
+
+            switch (field.type) {
+              case "password":
+                return (
+                  <Form.Item
+                    key={field.name}
+                    name={field.name}
+                    label={fieldLabel}
+                    rules={rules}
+                    tooltip={fieldHelp}
+                    initialValue={field.default}
+                  >
+                    <Input.Password placeholder={fieldPlaceholder} />
+                  </Form.Item>
+                );
+              case "number":
+                return (
+                  <Form.Item
+                    key={field.name}
+                    name={field.name}
+                    label={fieldLabel}
+                    rules={rules}
+                    tooltip={fieldHelp}
+                    initialValue={field.default}
+                  >
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      placeholder={fieldPlaceholder}
+                    />
+                  </Form.Item>
+                );
+              case "switch":
+                return (
+                  <Form.Item
+                    key={field.name}
+                    name={field.name}
+                    label={fieldLabel}
+                    valuePropName="checked"
+                    tooltip={fieldHelp}
+                    initialValue={field.default}
+                  >
+                    <Switch />
+                  </Form.Item>
+                );
+              case "select":
+                return (
+                  <Form.Item
+                    key={field.name}
+                    name={field.name}
+                    label={fieldLabel}
+                    rules={rules}
+                    tooltip={fieldHelp}
+                    initialValue={field.default}
+                  >
+                    <Select
+                      placeholder={fieldPlaceholder}
+                      options={(field.options || []).map((opt) => ({
+                        label: opt,
+                        value: opt,
+                      }))}
+                    />
+                  </Form.Item>
+                );
+              default:
+                return (
+                  <Form.Item
+                    key={field.name}
+                    name={field.name}
+                    label={fieldLabel}
+                    rules={rules}
+                    tooltip={fieldHelp}
+                    initialValue={field.default}
+                  >
+                    <Input placeholder={fieldPlaceholder} />
+                  </Form.Item>
+                );
+            }
+          })}
+        </>
+      );
+    }
+
+    // Fallback: infer field types from existing values (legacy behavior)
     if (!values) return null;
     const extraKeys = Object.keys(values).filter(
       (k) => !BASE_FIELDS.includes(k),
@@ -810,29 +1631,51 @@ export function ChannelDrawer({
               const url =
                 CHANNEL_DOC_EN_URLS[activeKey]! ||
                 CHANNEL_DOC_ZH_URLS[activeKey]!;
-              const isCopawDoc = url.includes(
-                "copaw.agentscope.io/docs/channels/",
+              const isQwenPawDoc = url.includes(
+                "qwenpaw.agentscope.io/docs/channels/",
               );
               const finalUrl =
-                isCopawDoc && currentLang === "zh"
+                isQwenPawDoc && currentLang === "zh"
                   ? CHANNEL_DOC_ZH_URLS[activeKey]!
                   : CHANNEL_DOC_EN_URLS[activeKey]!;
-              window.open(finalUrl, "_blank");
+              openExternalLink(finalUrl);
             }}
             className={styles.dingtalkDocBtn}
+            style={{ color: "#FF7F16" }}
           >
             {label} Doc
           </Button>
         )}
+      {/* Plugin channels: doc button driven by schema.doc_url.
+          Guarded so built-in channels (present in the maps above) never
+          reach this branch, keeping their behavior byte-for-byte. */}
+      {(() => {
+        if (!activeKey) return null;
+        if (CHANNEL_DOC_EN_URLS[activeKey] || CHANNEL_DOC_ZH_URLS[activeKey])
+          return null;
+        const url = resolveLocalized(channelSchema?.doc_url, i18n.language);
+        if (!/^https?:\/\//i.test(url)) return null;
+        return (
+          <Button
+            type="text"
+            size="small"
+            icon={<LinkOutlined />}
+            onClick={() => openExternalLink(url)}
+            className={styles.dingtalkDocBtn}
+            style={{ color: "#FF7F16" }}
+          >
+            {label} Doc
+          </Button>
+        );
+      })()}
       {activeKey === "voice" && (
         <Button
           type="text"
           size="small"
           icon={<LinkOutlined />}
-          onClick={() =>
-            window.open(TWILIO_CONSOLE_URL, "_blank", "noopener,noreferrer")
-          }
+          onClick={() => openExternalLink(TWILIO_CONSOLE_URL)}
           className={styles.dingtalkDocBtn}
+          style={{ color: "#FF7F16" }}
         >
           {t("channels.voiceSetupLink")}
         </Button>
@@ -858,22 +1701,34 @@ export function ChannelDrawer({
       title={drawerTitle}
       open={open}
       onClose={onClose}
-      destroyOnClose
+      destroyOnHidden
       footer={drawerFooter}
+      key={activeKey} // Force remount when switching channels
     >
       {activeKey && (
         <Form
           form={form}
           layout="vertical"
           initialValues={initialValues}
-          onFinish={onSubmit}
+          onFinish={(values: Record<string, unknown>) => {
+            if (activeKey !== "matrix") {
+              onSubmit(values);
+              return;
+            }
+            const { auth_method, ...rest } = values;
+            if (auth_method === "password") {
+              onSubmit({ ...rest, access_token: "" });
+            } else {
+              onSubmit({ ...rest, password: "", encryption: false });
+            }
+          }}
         >
           <Form.Item
             name="enabled"
             label={t("common.enabled")}
             valuePropName="checked"
           >
-            <Switch />
+            <Switch disabled={activeKey === "console"} />
           </Form.Item>
 
           {activeKey !== "voice" && (
@@ -882,25 +1737,74 @@ export function ChannelDrawer({
             </Form.Item>
           )}
 
-          {activeKey !== "console" && (
-            <>
+          <>
+            <Form.Item
+              name="show_tool_calls"
+              label={t("channels.showToolCalls")}
+              valuePropName="checked"
+              tooltip={t("channels.showToolCallsTooltip")}
+            >
+              <Switch />
+            </Form.Item>
+            {showToolCalls && (
               <Form.Item
-                name="filter_tool_messages"
-                label={t("channels.filterToolMessages")}
+                name="tool_call_max_length"
+                label={t("channels.toolCallMaxLength")}
+                tooltip={t("channels.toolMaxLengthTooltip")}
+              >
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+            )}
+            <Form.Item
+              name="show_tool_results"
+              label={t("channels.showToolResults")}
+              valuePropName="checked"
+              tooltip={t("channels.showToolResultsTooltip")}
+            >
+              <Switch />
+            </Form.Item>
+            {showToolResults && (
+              <Form.Item
+                name="tool_result_max_length"
+                label={t("channels.toolResultMaxLength")}
+                tooltip={t("channels.toolMaxLengthTooltip")}
+              >
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+            )}
+            {activeKey !== "console" && (
+              <Form.Item
+                name="show_thinking"
+                label={t("channels.showThinking")}
                 valuePropName="checked"
-                tooltip={t("channels.filterToolMessagesTooltip")}
+                tooltip={t("channels.showThinkingTooltip")}
               >
                 <Switch />
               </Form.Item>
-              <Form.Item
-                name="filter_thinking"
-                label={t("channels.filterThinking")}
-                valuePropName="checked"
-                tooltip={t("channels.filterThinkingTooltip")}
-              >
-                <Switch />
-              </Form.Item>
-            </>
+            )}
+          </>
+
+          {(activeKey === "wecom" ||
+            activeKey === "telegram" ||
+            activeKey === "dingtalk" ||
+            activeKey === "feishu" ||
+            activeKey === "discord" ||
+            activeKey === "slack" ||
+            activeKey === "matrix") && (
+            <Form.Item
+              name="streaming_enabled"
+              label={t("channels.streamingEnabled")}
+              valuePropName="checked"
+              tooltip={
+                activeKey === "dingtalk"
+                  ? t("channels.streamingEnabledDingtalkHint")
+                  : activeKey === "feishu"
+                  ? t("channels.streamingEnabledFeishuHint")
+                  : undefined
+              }
+            >
+              <Switch />
+            </Form.Item>
           )}
 
           {isBuiltin
@@ -909,6 +1813,18 @@ export function ChannelDrawer({
 
           {CHANNELS_WITH_ACCESS_CONTROL.includes(activeKey) &&
             renderAccessControlFields()}
+
+          {activeKey !== "console" && (
+            <Form.Item
+              name="no_text_debounce"
+              label={t("channels.noTextDebounce")}
+              valuePropName="checked"
+              tooltip={t("channels.noTextDebounceTooltip")}
+              initialValue={true}
+            >
+              <Switch />
+            </Form.Item>
+          )}
         </Form>
       )}
     </Drawer>

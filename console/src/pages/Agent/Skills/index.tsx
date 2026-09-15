@@ -1,298 +1,402 @@
-import { useState, useRef } from "react";
-import { Button, Form, Modal, message } from "@agentscope-ai/design";
-import {
-  DownloadOutlined,
-  PlusOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
-import type { SkillSpec } from "../../../api/types";
-import { SkillCard, SkillDrawer } from "./components";
-import { useSkills } from "./useSkills";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { PlusOutlined } from "@ant-design/icons";
+import { Button } from "@agentscope-ai/design";
+import {
+  SkillCard,
+  SkillDrawer,
+  PoolTransferModal,
+  ImportHubModal,
+  HeaderActions,
+  SkillsToolbar,
+  SkillListItem,
+  ProviderSkillDrawer,
+  getSkillVisual,
+} from "./components";
+import type { SkillSpec } from "../../../api/types";
+import type { HarnessDiscoveredSkill } from "../../../api/modules/harness";
+import { PageHeader } from "@/components/PageHeader";
+import { useSkillsPage } from "./useSkillsPage";
 import styles from "./index.module.less";
+import { useMemo, useCallback, useState } from "react";
+import { LockKeyhole, Sparkles } from "lucide-react";
 
 function SkillsPage() {
   const { t } = useTranslation();
   const {
     skills,
+    providerSkills,
+    visibleSkills,
+    hasMore,
+    sentinelRef,
+    poolSkills,
+    allTags,
+    sortedSkills,
+    conflictRenameModal,
     loading,
     uploading,
     importing,
-    cancelImport,
-    createSkill,
-    uploadSkill,
-    importFromHub,
+    drawerOpen,
+    drawerLoading,
+    editingSkillName,
+    importModalOpen,
+    setImportModalOpen,
+    editingSkill,
+    form,
+    fileInputRef,
+    poolModal,
+    setPoolModal,
+    selectedSkills,
+    batchModeEnabled,
+    viewMode,
+    setViewMode,
+    filterOpen,
+    setFilterOpen,
+    searchQuery,
+    setSearchQuery,
+    searchTags,
+    setSearchTags,
+    handleCreate,
+    handleEdit,
+    handleToggleEnabled,
+    handleDelete,
+    handleDrawerClose,
+    handleSubmit,
+    handleUploadToPool,
+    handleDownloadFromPool,
+    handleBatchEnable,
+    handleBatchDisable,
+    handleBatchDelete,
+    handleUploadClick,
+    handleFileChange,
+    handleConfirmImport,
+    closeImportModal,
+    closePoolModal,
+    toggleSelect,
+    selectAll,
+    clearSelection,
+    toggleBatchMode,
     toggleEnabled,
-    deleteSkill,
-  } = useSkills();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importUrl, setImportUrl] = useState("");
-  const [importUrlError, setImportUrlError] = useState("");
-  const [editingSkill, setEditingSkill] = useState<SkillSpec | null>(null);
-  const [hoverKey, setHoverKey] = useState<string | null>(null);
-  const [form] = Form.useForm<SkillSpec>();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+    refreshSkills,
+    hardRefresh,
+    cancelImport,
+  } = useSkillsPage();
 
-  const MAX_UPLOAD_SIZE_MB = 100;
+  const navigate = useNavigate();
+  const [selectedProviderSkill, setSelectedProviderSkill] =
+    useState<HarnessDiscoveredSkill | null>(null);
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+  const openMarket = useCallback(() => {
+    // Keep the install destination when the shared market page is opened from
+    // the workspace skills view. The skill pool uses the same page but a
+    // different destination.
+    navigate("/market?tab=skills&target=workspace");
+  }, [navigate]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Split skills into enabled and disabled groups
+  const { enabledSkills, disabledSkills } = useMemo(() => {
+    const enabled = visibleSkills.filter((skill) => skill.enabled);
+    const disabled = visibleSkills.filter((skill) => !skill.enabled);
+    return { enabledSkills: enabled, disabledSkills: disabled };
+  }, [visibleSkills]);
+  const enabledSkillCount = useMemo(
+    () => sortedSkills.filter((skill) => skill.enabled).length,
+    [sortedSkills],
+  );
 
-    // Reset input so the same file can be re-selected
-    e.target.value = "";
-
-    if (!file.name.toLowerCase().endsWith(".zip")) {
-      message.warning(t("skills.zipOnly"));
-      return;
-    }
-
-    const sizeMB = file.size / (1024 * 1024);
-    if (sizeMB > MAX_UPLOAD_SIZE_MB) {
-      message.warning(
-        t("skills.fileSizeExceeded", { size: sizeMB.toFixed(1) }),
-      );
-      return;
-    }
-
-    await uploadSkill(file);
-  };
-
-  const supportedSkillUrlPrefixes = [
-    "https://skills.sh/",
-    "https://clawhub.ai/",
-    "https://skillsmp.com/",
-    "https://lobehub.com/",
-    "https://market.lobehub.com/",
-    "https://github.com/",
-    "https://modelscope.cn/skills/",
-  ];
-
-  const isSupportedSkillUrl = (url: string) => {
-    return supportedSkillUrlPrefixes.some((prefix) => url.startsWith(prefix));
-  };
-
-  const handleCreate = () => {
-    setEditingSkill(null);
-    form.resetFields();
-    form.setFieldsValue({
-      enabled: false,
-    });
-    setDrawerOpen(true);
-  };
-
-  const closeImportModal = () => {
-    if (importing) {
-      return;
-    }
-    setImportModalOpen(false);
-    setImportUrl("");
-    setImportUrlError("");
-  };
-
-  const handleImportFromHub = () => {
-    setImportModalOpen(true);
-  };
-
-  const handleImportUrlChange = (value: string) => {
-    setImportUrl(value);
-    const trimmed = value.trim();
-    if (trimmed && !isSupportedSkillUrl(trimmed)) {
-      setImportUrlError(t("skills.invalidSkillUrlSource"));
-      return;
-    }
-    setImportUrlError("");
-  };
-
-  const handleConfirmImport = async () => {
-    if (importing) return;
-    const trimmed = importUrl.trim();
-    if (!trimmed) return;
-    if (!isSupportedSkillUrl(trimmed)) {
-      setImportUrlError(t("skills.invalidSkillUrlSource"));
-      return;
-    }
-    const success = await importFromHub(trimmed);
-    if (success) {
-      closeImportModal();
-    }
-  };
-
-  const handleEdit = (skill: SkillSpec) => {
-    setEditingSkill(skill);
-    form.setFieldsValue(skill);
-    setDrawerOpen(true);
-  };
-
-  const handleToggleEnabled = async (skill: SkillSpec, e: React.MouseEvent) => {
-    e.stopPropagation();
-    await toggleEnabled(skill);
-  };
-
-  const handleDelete = async (skill: SkillSpec, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    await deleteSkill(skill);
-  };
-
-  const handleDrawerClose = () => {
-    setDrawerOpen(false);
-    setEditingSkill(null);
-  };
-
-  const handleSubmit = async (values: { name: string; content: string }) => {
-    try {
-      const success = await createSkill(values.name, values.content);
-      if (success) {
-        setDrawerOpen(false);
-      }
-    } catch (error) {
-      console.error("Submit failed", error);
-    }
-  };
+  // Shared renderer for SkillListItem (used by both enabled and disabled sections)
+  const renderSkillListItem = useCallback(
+    (skill: SkillSpec) => (
+      <SkillListItem
+        key={skill.name}
+        skill={skill}
+        batchModeEnabled={batchModeEnabled}
+        isSelected={selectedSkills.has(skill.name)}
+        onSelect={() => toggleSelect(skill.name)}
+        onClick={() => handleEdit(skill)}
+        onToggleEnabled={async () => {
+          await toggleEnabled(skill);
+          await refreshSkills();
+        }}
+        onDelete={() => handleDelete(skill)}
+      />
+    ),
+    [
+      batchModeEnabled,
+      selectedSkills,
+      toggleSelect,
+      handleEdit,
+      toggleEnabled,
+      refreshSkills,
+      handleDelete,
+    ],
+  );
 
   return (
     <div className={styles.skillsPage}>
-      <div className={styles.header}>
-        <div className={styles.headerInfo}>
-          <h1 className={styles.title}>{t("skills.title")}</h1>
-          <p className={styles.description}>{t("skills.description")}</p>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
-            type="file"
-            accept=".zip"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            style={{ display: "none" }}
+      <PageHeader
+        items={[{ title: t("nav.agent") }, { title: t("skills.title") }]}
+        extra={
+          <HeaderActions
+            batchModeEnabled={batchModeEnabled}
+            selectedSkills={selectedSkills}
+            loading={loading}
+            uploading={uploading}
+            fileInputRef={fileInputRef}
+            onSelectAll={selectAll}
+            onClearSelection={clearSelection}
+            onUploadToPool={handleUploadToPool}
+            onBatchEnable={handleBatchEnable}
+            onBatchDisable={handleBatchDisable}
+            onBatchDelete={handleBatchDelete}
+            onToggleBatchMode={toggleBatchMode}
+            onHardRefresh={hardRefresh}
+            onOpenDownloadPool={() => setPoolModal("download")}
+            onOpenUploadPool={() => setPoolModal("upload")}
+            onUploadClick={handleUploadClick}
+            onImportHub={() => setImportModalOpen(true)}
+            onCreate={handleCreate}
+            onBrowseMarket={openMarket}
+            onFileChange={handleFileChange}
           />
-          <Button
-            type="primary"
-            onClick={handleUploadClick}
-            icon={<UploadOutlined />}
-            loading={uploading}
-            disabled={uploading}
-          >
-            {t("skills.uploadSkill")}
-          </Button>
-          <Button
-            type="primary"
-            onClick={handleImportFromHub}
-            icon={<DownloadOutlined />}
-          >
-            {t("skills.importSkills")}
-          </Button>
-          <Button type="primary" onClick={handleCreate} icon={<PlusOutlined />}>
-            {t("skills.createSkill")}
-          </Button>
-        </div>
-      </div>
-
-      <Modal
-        title={t("skills.importSkills")}
-        open={importModalOpen}
-        onCancel={closeImportModal}
-        maskClosable={!importing}
-        closable={!importing}
-        keyboard={!importing}
-        footer={
-          <div style={{ textAlign: "right" }}>
-            <Button
-              onClick={importing ? cancelImport : closeImportModal}
-              style={{ marginRight: 8 }}
-            >
-              {t(importing ? "skills.cancelImport" : "common.cancel")}
-            </Button>
-            <Button
-              type="primary"
-              onClick={handleConfirmImport}
-              loading={importing}
-              disabled={importing || !importUrl.trim() || !!importUrlError}
-            >
-              {t("skills.importSkills")}
-            </Button>
-          </div>
         }
-        width={760}
-      >
-        <div className={styles.importHintBlock}>
-          <p className={styles.importHintTitle}>
-            {t("skills.supportedSkillUrlSources")}
-          </p>
-          <ul className={styles.importHintList}>
-            <li>https://skills.sh/</li>
-            <li>https://clawhub.ai/</li>
-            <li>https://skillsmp.com/</li>
-            <li>https://lobehub.com/</li>
-            <li>https://market.lobehub.com/</li>
-            <li>https://github.com/</li>
-            <li>https://modelscope.cn/skills/</li>
-          </ul>
-          <p className={styles.importHintTitle}>{t("skills.urlExamples")}</p>
-          <ul className={styles.importHintList}>
-            <li>https://skills.sh/vercel-labs/skills/find-skills</li>
-            <li>https://lobehub.com/zh/skills/openclaw-skills-cli-developer</li>
-            <li>
-              https://market.lobehub.com/api/v1/skills/openclaw-skills-cli-developer/download
-            </li>
-            <li>
-              https://github.com/anthropics/skills/tree/main/skills/skill-creator
-            </li>
-            <li>https://modelscope.cn/skills/@anthropics/skill-creator</li>
-          </ul>
-        </div>
+      />
 
-        <input
-          className={styles.importUrlInput}
-          value={importUrl}
-          onChange={(e) => handleImportUrlChange(e.target.value)}
-          placeholder={t("skills.enterSkillUrl")}
-          disabled={importing}
+      <ImportHubModal
+        open={importModalOpen}
+        importing={importing}
+        onCancel={closeImportModal}
+        onConfirm={handleConfirmImport}
+        cancelImport={cancelImport}
+        hint={t("skillPool.externalHubHint")}
+      />
+
+      {providerSkills.length > 0 && (
+        <div className={styles.managementBanner}>
+          <Sparkles size={16} />
+          <div>
+            <strong>{t("skills.qwenpawManaged")}</strong>
+            <span>{t("skills.qwenpawManagedHint")}</span>
+          </div>
+        </div>
+      )}
+
+      {!loading && skills.length > 0 && (
+        <SkillsToolbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchTags={searchTags}
+          onTagsChange={setSearchTags}
+          allTags={allTags}
+          filterOpen={filterOpen}
+          onFilterOpenChange={setFilterOpen}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
-        {importUrlError ? (
-          <div className={styles.importUrlError}>{importUrlError}</div>
-        ) : null}
-        {importing ? (
-          <div className={styles.importLoadingText}>{t("common.loading")}</div>
-        ) : null}
-      </Modal>
+      )}
 
       {loading ? (
         <div className={styles.loading}>
           <span className={styles.loadingText}>{t("common.loading")}</span>
         </div>
-      ) : (
-        <div className={styles.skillsGrid}>
-          {skills
-            .slice()
-            .sort((a, b) => {
-              if (a.enabled && !b.enabled) return -1;
-              if (!a.enabled && b.enabled) return 1;
-              return a.name.localeCompare(b.name);
-            })
-            .map((skill) => (
-              <SkillCard
-                key={skill.name}
-                skill={skill}
-                isHover={hoverKey === skill.name}
-                onClick={() => handleEdit(skill)}
-                onMouseEnter={() => setHoverKey(skill.name)}
-                onMouseLeave={() => setHoverKey(null)}
-                onToggleEnabled={(e) => handleToggleEnabled(skill, e)}
-                onDelete={(e) => handleDelete(skill, e)}
-              />
-            ))}
+      ) : skills.length === 0 ? (
+        <div
+          className={`${styles.emptyState} ${
+            providerSkills.length > 0 ? styles.emptyStateCompact : ""
+          }`}
+        >
+          <div className={styles.emptyStateBadge}>
+            {t("skills.emptyStateBadge")}
+          </div>
+          <h2 className={styles.emptyStateTitle}>
+            {t("skills.emptyStateTitle")}
+          </h2>
+          <p className={styles.emptyStateText}>{t("skills.emptyStateText")}</p>
+          <div className={styles.emptyStateActions}>
+            <Button
+              type="primary"
+              className={styles.primaryActionButton}
+              onClick={handleCreate}
+              icon={<PlusOutlined />}
+            >
+              {t("skills.emptyStateCreate")}
+            </Button>
+          </div>
         </div>
+      ) : sortedSkills.length === 0 ? (
+        <div className={styles.noSearchResults}>
+          <span className={styles.noSearchResultsIcon}>🔍</span>
+          <span className={styles.noSearchResultsText}>
+            {t("skills.noSearchResults")}
+          </span>
+        </div>
+      ) : (
+        <>
+          {/* Enabled Skills Section */}
+          {enabledSkills.length > 0 && (
+            <div className={styles.panelSection}>
+              <div className={styles.panelTitle}>
+                <span className={styles.panelDotGreen} />
+                {t("skills.enabledSkills")}
+                <span className={styles.panelCount}>
+                  {enabledSkillCount} {t("skills.active")}
+                </span>
+              </div>
+
+              {viewMode === "card" ? (
+                <div className={styles.skillsGrid}>
+                  {enabledSkills.map((skill) => (
+                    <SkillCard
+                      key={skill.name}
+                      skill={skill}
+                      selected={
+                        batchModeEnabled
+                          ? selectedSkills.has(skill.name)
+                          : undefined
+                      }
+                      onSelect={() => toggleSelect(skill.name)}
+                      onClick={() => handleEdit(skill)}
+                      onMouseEnter={() => {}}
+                      onMouseLeave={() => {}}
+                      onToggleEnabled={(e) => handleToggleEnabled(skill, e)}
+                      onDelete={(e) => handleDelete(skill, e)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className={styles.skillsList}>
+                  {enabledSkills.map(renderSkillListItem)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Disabled Skills Section */}
+          {disabledSkills.length > 0 && (
+            <div className={styles.panelSectionDashed}>
+              <div className={styles.panelTitle}>
+                <span className={styles.panelDotGray} />
+                {t("skills.disabledSkills")}
+              </div>
+              {viewMode === "card" ? (
+                <div className={styles.disabledSkillsGrid}>
+                  {disabledSkills.map((skill) => (
+                    <div
+                      key={skill.name}
+                      className={styles.disabledSkillGridItem}
+                      onClick={() => handleEdit(skill)}
+                    >
+                      <span className={styles.disabledSkillGridIcon}>
+                        {getSkillVisual(skill.name, skill.emoji)}
+                      </span>
+                      <span className={styles.disabledSkillGridName}>
+                        {skill.name}
+                      </span>
+                      <span
+                        className={styles.disabledSkillGridAction}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleEnabled(skill, e);
+                        }}
+                      >
+                        {t("common.enable")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={styles.skillsList}>
+                  {disabledSkills.map(renderSkillListItem)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {hasMore && (
+            <div
+              ref={sentinelRef}
+              style={{ height: 1, minHeight: 1, flexShrink: 0 }}
+            />
+          )}
+        </>
       )}
+
+      {providerSkills.length > 0 && (
+        <section className={styles.providerSkillsSection}>
+          <div className={styles.providerSkillsHeading}>
+            <div>
+              <span className={styles.providerSkillsTitle}>
+                <LockKeyhole size={16} />
+                {t("skills.providerManaged")}
+              </span>
+              <p>{t("skills.providerManagedHint")}</p>
+            </div>
+            <span className={styles.providerSkillsCount}>
+              {providerSkills.length}
+            </span>
+          </div>
+          <div className={styles.providerSkillsGrid}>
+            {providerSkills.map((skill) => (
+              <button
+                type="button"
+                key={`${skill.provider_id}:${skill.source}:${skill.name}`}
+                className={styles.providerSkillCard}
+                onClick={() => setSelectedProviderSkill(skill)}
+                aria-label={`${t("common.view")}: ${skill.name}`}
+              >
+                <div className={styles.providerSkillTop}>
+                  <span className={styles.providerSkillIcon}>
+                    <LockKeyhole size={15} />
+                  </span>
+                  <span
+                    className={
+                      skill.enabled
+                        ? styles.providerSkillEnabled
+                        : styles.providerSkillDisabled
+                    }
+                  >
+                    {skill.enabled ? t("common.enabled") : t("common.disabled")}
+                  </span>
+                </div>
+                <strong title={skill.name}>{skill.name}</strong>
+                <p>{skill.description || t("skills.noDescription")}</p>
+                <div className={styles.providerSkillMeta}>
+                  <span>{skill.provider_id}</span>
+                  {skill.source && <span>{skill.source}</span>}
+                  <span>{t("skills.providerOnly")}</span>
+                  <span>{t("skills.readOnly")}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <ProviderSkillDrawer
+        open={selectedProviderSkill !== null}
+        skill={selectedProviderSkill}
+        onClose={() => setSelectedProviderSkill(null)}
+      />
+
+      <PoolTransferModal
+        mode={poolModal}
+        skills={skills}
+        poolSkills={poolSkills}
+        onCancel={closePoolModal}
+        onUpload={handleUploadToPool}
+        onDownload={handleDownloadFromPool}
+      />
+
+      {conflictRenameModal}
 
       <SkillDrawer
         open={drawerOpen}
+        editing={drawerLoading || editingSkill !== null}
+        editingName={editingSkillName}
+        loading={drawerLoading}
         editingSkill={editingSkill}
         form={form}
+        availableTags={allTags}
         onClose={handleDrawerClose}
         onSubmit={handleSubmit}
       />

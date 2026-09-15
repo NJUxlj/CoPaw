@@ -4,16 +4,18 @@ from __future__ import annotations
 import sys
 import json
 from pathlib import Path
+from functools import partial
 
 import httpx
 import pytest
 from click.testing import CliRunner
 
-from copaw.__version__ import __version__
-from copaw.cli.main import cli
-from copaw.cli.update_cmd import (
+from qwenpaw.__version__ import __version__
+from qwenpaw.cli.main import cli
+from qwenpaw.cli.update_cmd import (
     InstallInfo,
     RunningServiceInfo,
+    _build_upgrade_command,
     _detect_running_service,
     _detect_installation,
     _is_newer_version,
@@ -21,6 +23,7 @@ from copaw.cli.update_cmd import (
     _detect_source_type,
     _run_update_worker_detached,
     _run_update_worker_foreground,
+    _select_latest_version,
     run_update_worker,
 )
 
@@ -31,7 +34,7 @@ def _install_info(
     installer: str = "pip",
 ) -> InstallInfo:
     return InstallInfo(
-        package_dir="/tmp/site-packages/copaw",
+        package_dir="/tmp/site-packages/qwenpaw",
         python_executable="/tmp/venv/bin/python",
         environment_root="/tmp/venv",
         environment_kind="virtualenv",
@@ -62,31 +65,69 @@ def test_is_newer_version(
     assert _is_newer_version(latest, current) is expected
 
 
+def test_select_latest_version_prefers_stable_by_default() -> None:
+    data = {
+        "info": {"version": "2.0.0b1"},
+        "releases": {
+            "1.9.0": [{"url": "https://example.com/qwenpaw-1.9.0.tar.gz"}],
+            "2.0.0b1": [{"url": "https://example.com/qwenpaw-2.0.0b1.tar.gz"}],
+        },
+    }
+
+    assert _select_latest_version(data, include_prerelease=False) == "1.9.0"
+    assert _select_latest_version(data, include_prerelease=True) == "2.0.0b1"
+
+
+def test_build_upgrade_command_adds_prerelease_flag_for_uv_only_when_requested(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "qwenpaw.cli.update_cmd.shutil.which",
+        lambda name: "/usr/local/bin/uv" if name == "uv" else None,
+    )
+    info = _install_info(installer="uv")
+
+    stable_command, label = _build_upgrade_command(
+        info,
+        "1.9.0",
+        include_prerelease=False,
+    )
+    prerelease_command, _ = _build_upgrade_command(
+        info,
+        "2.0.0b1",
+        include_prerelease=True,
+    )
+
+    assert label == "uv pip"
+    assert "--prerelease=allow" not in stable_command
+    assert prerelease_command[-1] == "--prerelease=allow"
+
+
 @pytest.mark.parametrize(
     ("direct_url", "expected"),
     [
         (None, ("pypi", None)),
         (
             {
-                "url": "file:///Users/test/CoPaw",
+                "url": "file:///Users/test/QwenPaw",
                 "dir_info": {"editable": True},
             },
-            ("editable", "file:///Users/test/CoPaw"),
+            ("editable", "file:///Users/test/QwenPaw"),
         ),
         (
             {
-                "url": "https://github.com/agentscope-ai/CoPaw.git",
+                "url": "https://github.com/agentscope-ai/QwenPaw.git",
                 "vcs_info": {"vcs": "git", "commit_id": "abc123"},
             },
-            ("vcs", "https://github.com/agentscope-ai/CoPaw.git"),
+            ("vcs", "https://github.com/agentscope-ai/QwenPaw.git"),
         ),
         (
-            {"url": "file:///tmp/copaw.whl"},
-            ("local", "file:///tmp/copaw.whl"),
+            {"url": "file:///tmp/qwenpaw.whl"},
+            ("local", "file:///tmp/qwenpaw.whl"),
         ),
         (
-            {"url": "https://example.com/copaw.whl"},
-            ("direct-url", "https://example.com/copaw.whl"),
+            {"url": "https://example.com/qwenpaw.whl"},
+            ("direct-url", "https://example.com/qwenpaw.whl"),
         ),
     ],
 )
@@ -111,13 +152,13 @@ def test_detect_source_type(
             "uv\n",
             json.dumps(
                 {
-                    "url": "file:///Users/test/CoPaw",
+                    "url": "file:///Users/test/QwenPaw",
                     "dir_info": {"editable": True},
                 },
             ),
             "uv",
             "editable",
-            "file:///Users/test/CoPaw",
+            "file:///Users/test/QwenPaw",
         ),
     ],
 )
@@ -129,7 +170,7 @@ def test_detect_installation(
     expected_source_type: str,
     expected_source_url: str | None,
 ) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     class _FakeDistribution:
         def read_text(self, name: str) -> str | None:
@@ -170,14 +211,14 @@ def test_detect_installation(
 
 
 def test_update_reports_up_to_date(monkeypatch) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     install_info = _install_info()
 
     def _detect_installation() -> InstallInfo:
         return install_info
 
-    def _fetch_latest_version() -> str:
+    def _fetch_latest_version(**_: object) -> str:
         return __version__
 
     monkeypatch.setattr(
@@ -194,47 +235,50 @@ def test_update_reports_up_to_date(monkeypatch) -> None:
     result = CliRunner().invoke(cli, ["update", "--yes"])
 
     assert result.exit_code == 0
-    assert "CoPaw is already up to date." in result.output
+    assert "QwenPaw is already up to date." in result.output
 
 
-def test_probe_service_ignores_proxy_env(monkeypatch) -> None:
-    captured: dict[str, object] = {}
+@pytest.mark.parametrize(
+    "base_url",
+    ["http://127.0.0.1:8088", "http://example.com:8088"],
+)
+def test_probe_service_ignores_proxy_env(monkeypatch, base_url) -> None:
+    captured = {}
+    real_client = httpx.Client
 
-    class _Response:
-        def raise_for_status(self) -> None:
-            return None
-
-        def json(self) -> dict[str, str]:
-            return {"version": "1.2.3"}
-
-    def _fake_get(url: str, **kwargs):
-        captured["url"] = url
+    def create_client(**kwargs):
         captured.update(kwargs)
-        return _Response()
+        return real_client(
+            **kwargs,
+            transport=httpx.MockTransport(
+                lambda _: httpx.Response(200, json={"version": "1.2.3"}),
+            ),
+        )
 
-    monkeypatch.setattr("copaw.cli.update_cmd.httpx.get", _fake_get)
-
-    result = _probe_service("http://127.0.0.1:8088")
+    monkeypatch.setattr(httpx, "Client", create_client)
+    result = _probe_service(base_url)
 
     assert result.is_running is True
-    assert result.base_url == "http://127.0.0.1:8088"
+    assert result.base_url == base_url
     assert result.version == "1.2.3"
     assert captured["trust_env"] is False
 
 
 def test_probe_service_returns_not_running_on_http_error(monkeypatch) -> None:
-    def _fake_get(_url: str, **_kwargs):
+    def respond(_request):
         raise httpx.HTTPError("bad gateway")
 
-    monkeypatch.setattr("copaw.cli.update_cmd.httpx.get", _fake_get)
-
+    monkeypatch.setattr(
+        httpx,
+        "Client",
+        partial(httpx.Client, transport=httpx.MockTransport(respond)),
+    )
     result = _probe_service("http://127.0.0.1:8088")
-
     assert result.is_running is False
 
 
 def test_detect_running_service_handles_wildcard_host(monkeypatch) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     monkeypatch.setattr(update_cmd_module, "read_last_api", lambda: None)
     monkeypatch.setattr(
@@ -260,7 +304,7 @@ def test_detect_running_service_handles_wildcard_host(monkeypatch) -> None:
 def test_detect_running_service_falls_back_to_process_ports(
     monkeypatch,
 ) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     monkeypatch.setattr(update_cmd_module, "read_last_api", lambda: None)
     monkeypatch.setattr(
@@ -284,14 +328,14 @@ def test_detect_running_service_falls_back_to_process_ports(
 
 
 def test_update_blocks_running_service(monkeypatch) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     install_info = _install_info()
 
     def _detect_installation() -> InstallInfo:
         return install_info
 
-    def _fetch_latest_version() -> str:
+    def _fetch_latest_version(**_: object) -> str:
         return "9.9.9"
 
     monkeypatch.setattr(
@@ -317,14 +361,15 @@ def test_update_blocks_running_service(monkeypatch) -> None:
     result = CliRunner().invoke(cli, ["update", "--yes"])
 
     assert result.exit_code != 0
-    assert "Please stop it before running `copaw update`" in result.output
+    assert "Please stop it before running `qwenpaw update`" in result.output
     assert (
-        "without `--yes` to confirm a forced `copaw shutdown`" in result.output
+        "without `--yes` to confirm a forced `qwenpaw shutdown`"
+        in result.output
     )
 
 
 def test_update_can_cancel_forced_shutdown(monkeypatch) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     install_info = _install_info()
 
@@ -336,7 +381,7 @@ def test_update_can_cancel_forced_shutdown(monkeypatch) -> None:
     monkeypatch.setattr(
         update_cmd_module,
         "_fetch_latest_version",
-        lambda: "9.9.9",
+        lambda **_: "9.9.9",
     )
     monkeypatch.setattr(
         update_cmd_module,
@@ -352,11 +397,11 @@ def test_update_can_cancel_forced_shutdown(monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert (
-        "forcibly terminate the current CoPaw backend/frontend "
+        "forcibly terminate the current QwenPaw backend/frontend "
         "processes" in result.output
     )
     assert (
-        "Run `copaw shutdown` now and continue with the update?"
+        "Run `qwenpaw shutdown` now and continue with the update?"
         in result.output
     )
     assert "Cancelled." in result.output
@@ -366,7 +411,7 @@ def test_update_can_force_shutdown_running_service(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     install_info = _install_info()
     spawned: dict[str, object] = {}
@@ -391,7 +436,7 @@ def test_update_can_force_shutdown_running_service(
     monkeypatch.setattr(
         update_cmd_module,
         "_fetch_latest_version",
-        lambda: "9.9.9",
+        lambda **_: "9.9.9",
     )
     monkeypatch.setattr(
         update_cmd_module,
@@ -412,7 +457,7 @@ def test_update_can_force_shutdown_running_service(
         assert command == [
             "/tmp/venv/bin/python",
             "-m",
-            "copaw",
+            "qwenpaw",
             "--port",
             "8088",
             "shutdown",
@@ -420,7 +465,7 @@ def test_update_can_force_shutdown_running_service(
 
         class _Result:
             returncode = 0
-            stdout = "Stopped CoPaw processes: 1234\n"
+            stdout = "Stopped QwenPaw processes: 1234\n"
 
         return _Result()
 
@@ -439,21 +484,21 @@ def test_update_can_force_shutdown_running_service(
     result = CliRunner().invoke(cli, ["update"], input="y\ny\n")
 
     assert result.exit_code == 0
-    assert "Running `copaw shutdown` before updating..." in result.output
-    assert "Stopped CoPaw processes: 1234" in result.output
-    assert "Starting CoPaw update..." in result.output
+    assert "Running `qwenpaw shutdown` before updating..." in result.output
+    assert "Stopped QwenPaw processes: 1234" in result.output
+    assert "Starting QwenPaw update..." in result.output
     assert isinstance(spawned["path"], Path)
 
 
 def test_update_can_cancel_non_pypi_override(monkeypatch) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     install_info = _install_info(source_type="editable")
 
     def _detect_installation() -> InstallInfo:
         return install_info
 
-    def _fetch_latest_version() -> str:
+    def _fetch_latest_version(**_: object) -> str:
         return "9.9.9"
 
     monkeypatch.setattr(
@@ -479,7 +524,7 @@ def test_update_can_override_non_pypi_install_with_yes(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     spawned: dict[str, object] = {}
     install_info = _install_info(source_type="editable")
@@ -487,7 +532,7 @@ def test_update_can_override_non_pypi_install_with_yes(
     def _detect_installation() -> InstallInfo:
         return install_info
 
-    def _fetch_latest_version() -> str:
+    def _fetch_latest_version(**_: object) -> str:
         return "9.9.9"
 
     def _detect_running_service(
@@ -530,12 +575,12 @@ def test_update_can_override_non_pypi_install_with_yes(
 
     assert result.exit_code == 0
     assert "Proceeding because `--yes` was provided." in result.output
-    assert "Starting CoPaw update..." in result.output
+    assert "Starting QwenPaw update..." in result.output
     assert isinstance(spawned["path"], Path)
 
 
 def test_update_spawns_worker(monkeypatch, tmp_path: Path) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     spawned: dict[str, object] = {}
     install_info = _install_info()
@@ -543,7 +588,7 @@ def test_update_spawns_worker(monkeypatch, tmp_path: Path) -> None:
     def _detect_installation() -> InstallInfo:
         return install_info
 
-    def _fetch_latest_version() -> str:
+    def _fetch_latest_version(**_: object) -> str:
         return "9.9.9"
 
     def _detect_running_service(
@@ -585,7 +630,7 @@ def test_update_spawns_worker(monkeypatch, tmp_path: Path) -> None:
     result = CliRunner().invoke(cli, ["update", "--yes"])
 
     assert result.exit_code == 0
-    assert "Starting CoPaw update..." in result.output
+    assert "Starting QwenPaw update..." in result.output
     assert isinstance(spawned["path"], Path)
     plan = spawned["plan"]
     assert plan["latest_version"] == "9.9.9"  # type: ignore [index]
@@ -602,14 +647,14 @@ def test_update_spawns_worker(monkeypatch, tmp_path: Path) -> None:
 def test_update_prompts_when_version_is_not_comparable(
     monkeypatch,
 ) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     install_info = _install_info()
 
     def _detect_installation() -> InstallInfo:
         return install_info
 
-    def _fetch_latest_version() -> str:
+    def _fetch_latest_version(**_: object) -> str:
         return "main"
 
     monkeypatch.setattr(
@@ -634,7 +679,7 @@ def test_update_can_continue_when_version_is_not_comparable(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     spawned: dict[str, object] = {}
     install_info = _install_info()
@@ -642,7 +687,7 @@ def test_update_can_continue_when_version_is_not_comparable(
     def _detect_installation() -> InstallInfo:
         return install_info
 
-    def _fetch_latest_version() -> str:
+    def _fetch_latest_version(**_: object) -> str:
         return "main"
 
     def _detect_running_service(
@@ -685,11 +730,11 @@ def test_update_can_continue_when_version_is_not_comparable(
 
     assert result.exit_code == 0
     assert isinstance(spawned["path"], Path)
-    assert "Starting CoPaw update..." in result.output
+    assert "Starting QwenPaw update..." in result.output
 
 
 def test_update_returns_worker_exit_code(monkeypatch, tmp_path: Path) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     install_info = _install_info()
 
@@ -703,7 +748,7 @@ def test_update_returns_worker_exit_code(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
         update_cmd_module,
         "_fetch_latest_version",
-        lambda: "9.9.9",
+        lambda **_: "9.9.9",
     )
     monkeypatch.setattr(
         update_cmd_module,
@@ -719,14 +764,14 @@ def test_update_returns_worker_exit_code(monkeypatch, tmp_path: Path) -> None:
     result = CliRunner().invoke(cli, ["update", "--yes"])
 
     assert result.exit_code == 2
-    assert "Starting CoPaw update..." in result.output
+    assert "Starting QwenPaw update..." in result.output
 
 
 def test_update_detaches_worker_on_windows(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    from copaw.cli import update_cmd as update_cmd_module
+    from qwenpaw.cli import update_cmd as update_cmd_module
 
     install_info = _install_info()
     spawned: dict[str, object] = {}
@@ -741,7 +786,7 @@ def test_update_detaches_worker_on_windows(
     monkeypatch.setattr(
         update_cmd_module,
         "_fetch_latest_version",
-        lambda: "9.9.9",
+        lambda **_: "9.9.9",
     )
     monkeypatch.setattr(
         update_cmd_module,
@@ -767,7 +812,7 @@ def test_update_detaches_worker_on_windows(
     result = CliRunner().invoke(cli, ["update", "--yes"])
 
     assert result.exit_code == 0
-    assert "Starting CoPaw update..." in result.output
+    assert "Starting QwenPaw update..." in result.output
     assert "continue after this command exits" in result.output
     assert isinstance(spawned["path"], Path)
     assert spawned["plan"]["launcher_pid"] is not None  # type: ignore[index]
@@ -794,7 +839,7 @@ def test_update_worker_waits_for_launcher_exit(
 
     waited: list[tuple[int | None, float]] = []
     monkeypatch.setattr(
-        "copaw.cli.update_cmd._wait_for_process_exit",
+        "qwenpaw.cli.update_cmd._wait_for_process_exit",
         lambda pid, timeout=15.0: waited.append((pid, timeout)),
     )
 
@@ -818,7 +863,7 @@ def test_run_update_worker_detached_spawns_without_capture(
         return object()
 
     monkeypatch.setattr(
-        "copaw.cli.update_cmd._spawn_update_worker",
+        "qwenpaw.cli.update_cmd._spawn_update_worker",
         _fake_spawn,
     )
 
@@ -873,11 +918,11 @@ def test_update_worker_foreground_streams_output_and_cleans_plan(
     captured = capsys.readouterr()
 
     assert return_code == 0
-    assert "[copaw] Updating CoPaw 1.0.0 -> 9.9.9..." in captured.out
-    assert "[copaw] Using installer: integration-test" in captured.out
+    assert "[qwenpaw] Updating QwenPaw 1.0.0 -> 9.9.9..." in captured.out
+    assert "[qwenpaw] Using installer: integration-test" in captured.out
     assert "installer: preparing" in captured.out
     assert "installer: done" in captured.out
-    assert "[copaw] Update completed successfully." in captured.out
+    assert "[qwenpaw] Update completed successfully." in captured.out
     assert not plan_path.exists()
 
 
@@ -906,5 +951,5 @@ def test_update_worker_foreground_propagates_failure_exit_code(
 
     assert return_code == 7
     assert "installer: failing" in captured.out
-    assert "[copaw] Update failed with exit code 7." in captured.out
+    assert "[qwenpaw] Update failed with exit code 7." in captured.out
     assert not plan_path.exists()
